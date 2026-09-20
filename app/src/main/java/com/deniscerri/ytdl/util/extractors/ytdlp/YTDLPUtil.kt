@@ -90,6 +90,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         if (proxy!!.isNotBlank()){
             addOption("--proxy", proxy)
         }
+
+        val siteUsername = sharedPreferences.getString("site_username", "")
+        val sitePassword = sharedPreferences.getString("site_password", "")
+        if (!siteUsername.isNullOrBlank()) {
+            addOption("--username", siteUsername)
+            if (!sitePassword.isNullOrBlank()) {
+                addOption("--password", sitePassword)
+            }
+        }
+
         addOption("-P", FileUtil.getCachePath(context) + "/tmp")
 
         if (sharedPreferences.getBoolean("no_check_certificates", false)) {
@@ -1019,6 +1029,15 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         val proxy = sharedPreferences.getString("proxy", "")
         if (proxy!!.isNotBlank()){
             request.addOption("--proxy", proxy)
+        }
+
+        val siteUsername = sharedPreferences.getString("site_username", "")
+        val sitePassword = sharedPreferences.getString("site_password", "")
+        if (!siteUsername.isNullOrBlank()) {
+            request.addOption("--username", siteUsername)
+            if (!sitePassword.isNullOrBlank()) {
+                request.addOption("--password", sitePassword)
+            }
         }
 
         val keepCache = sharedPreferences.getBoolean("keep_cache", false)

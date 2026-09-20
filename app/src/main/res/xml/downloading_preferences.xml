@@ -81,6 +81,21 @@
             app:summary="@string/socks5_proxy_summary"
             app:title="@string/socks5_proxy" />
 
+        <EditTextPreference
+            android:icon="@drawable/baseline_person_24"
+            app:key="site_username"
+            app:defaultValue=""
+            app:summary="@string/site_login_summary"
+            app:title="@string/site_username" />
+
+        <EditTextPreference
+            android:icon="@drawable/baseline_network_locked_24"
+            app:key="site_password"
+            app:defaultValue=""
+            app:summary="@string/site_login_summary"
+            app:title="@string/site_password"
+            android:inputType="textPassword" />
+
         <ListPreference
             android:defaultValue="auto"
             android:entries="@array/download_types"

@@ -1,0 +1,143 @@
+diff --git a/app/build.gradle b/app/build.gradle
+index 30c0ae4..b78f18a 100644
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -45,13 +45,13 @@ android {
+         }
+     }catch(IOException ignored){}
+     defaultConfig {
+-        applicationId "com.deniscerri.ytdl"
++        applicationId "com.deniscerri.ytdl.sbs"
+         minSdk 24
+         targetSdk 36
+         versionCode versionMajor * 1000000 + versionMinor * 10000 + versionPatch * 100 + versionBuild
+         versionName "${versionMajor}.${versionMinor}.${versionPatch}${versionExt}"
+         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+-        archivesBaseName = "YTDLnis-$versionName"
++        archivesBaseName = "YTDLNIS_SBS-$versionName"
+         vectorDrawables {
+             useSupportLibrary true
+         }
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 4a585b1..50b638f 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -48,7 +48,7 @@
+         android:dataExtractionRules="@xml/data_extraction_rules"
+         android:enableOnBackInvokedCallback="true"
+         android:icon="@mipmap/ic_launcher"
+-        android:label="YTDLnis"
++        android:label="YTDLNIS_SBS"
+         android:localeConfig="@xml/locales_config"
+         android:requestLegacyExternalStorage="true"
+         android:roundIcon="@mipmap/ic_launcher_round"
+diff --git a/app/src/main/java/com/deniscerri/ytdl/ui/more/settings/downloading/DownloadSettingsModule.kt b/app/src/main/java/com/deniscerri/ytdl/ui/more/settings/downloading/DownloadSettingsModule.kt
+index 71c87c6..0407bd7 100644
+--- a/app/src/main/java/com/deniscerri/ytdl/ui/more/settings/downloading/DownloadSettingsModule.kt
++++ b/app/src/main/java/com/deniscerri/ytdl/ui/more/settings/downloading/DownloadSettingsModule.kt
+@@ -255,6 +255,28 @@ object DownloadSettingsModule : SettingModule {
+                     }
+                 }
+             }
++            "site_username" -> {
++                (pref as EditTextPreference).apply {
++                    val s = context.getString(R.string.site_login_summary)
++                    summary = if (text.isNullOrBlank()) s else "${s}\n[${text}]"
++                    setOnPreferenceChangeListener { _, newValue ->
++                        summary = if ((newValue as String?).isNullOrBlank()) s else "${s}\n[${newValue}]"
++                        host.refreshUI()
++                        true
++                    }
++                }
++            }
++            "site_password" -> {
++                (pref as EditTextPreference).apply {
++                    val s = context.getString(R.string.site_login_summary)
++                    summary = if (text.isNullOrBlank()) s else "${s}\n[set]"
++                    setOnPreferenceChangeListener { _, newValue ->
++                        summary = if ((newValue as String?).isNullOrBlank()) s else "${s}\n[set]"
++                        host.refreshUI()
++                        true
++                    }
++                }
++            }
+             "preferred_download_type" -> {
+                 (pref as ListPreference).apply {
+                     val s = context.getString(R.string.preferred_download_type_summary)
+diff --git a/app/src/main/java/com/deniscerri/ytdl/util/extractors/ytdlp/YTDLPUtil.kt b/app/src/main/java/com/deniscerri/ytdl/util/extractors/ytdlp/YTDLPUtil.kt
+index a86ad18..1ffd5f8 100644
+--- a/app/src/main/java/com/deniscerri/ytdl/util/extractors/ytdlp/YTDLPUtil.kt
++++ b/app/src/main/java/com/deniscerri/ytdl/util/extractors/ytdlp/YTDLPUtil.kt
+@@ -90,6 +90,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
+         if (proxy!!.isNotBlank()){
+             addOption("--proxy", proxy)
+         }
++
++        val siteUsername = sharedPreferences.getString("site_username", "")
++        val sitePassword = sharedPreferences.getString("site_password", "")
++        if (!siteUsername.isNullOrBlank()) {
++            addOption("--username", siteUsername)
++            if (!sitePassword.isNullOrBlank()) {
++                addOption("--password", sitePassword)
++            }
++        }
++
+         addOption("-P", FileUtil.getCachePath(context) + "/tmp")
+ 
+         if (sharedPreferences.getBoolean("no_check_certificates", false)) {
+@@ -1021,6 +1031,15 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
+             request.addOption("--proxy", proxy)
+         }
+ 
++        val siteUsername = sharedPreferences.getString("site_username", "")
++        val sitePassword = sharedPreferences.getString("site_password", "")
++        if (!siteUsername.isNullOrBlank()) {
++            request.addOption("--username", siteUsername)
++            if (!sitePassword.isNullOrBlank()) {
++                request.addOption("--password", sitePassword)
++            }
++        }
++
+         val keepCache = sharedPreferences.getBoolean("keep_cache", false)
+         if(keepCache){
+             request.addOption("--keep-fragments")
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index e4c05f4..141113e 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -266,6 +266,9 @@
+     <string name="backup_restore">Backup and restore</string>
+     <string name="socks5_proxy_summary">Use the specified HTTP/HTTPS/SOCKS proxy</string>
+     <string name="socks5_proxy">SOCKS5 proxy URL</string>
++    <string name="site_username">Site username</string>
++    <string name="site_password">Site password</string>
++    <string name="site_login_summary">Used for sites yt-dlp supports native login on. Stored unencrypted.</string>
+     <string name="search_suggestions">Search suggestions</string>
+     <string name="search_suggestions_summary">Get search suggestions from Google</string>
+     <string name="preferred_format_id_summary">Select the format with this ID in the download card</string>
+diff --git a/app/src/main/res/xml/downloading_preferences.xml b/app/src/main/res/xml/downloading_preferences.xml
+index 8933d46..795b7de 100644
+--- a/app/src/main/res/xml/downloading_preferences.xml
++++ b/app/src/main/res/xml/downloading_preferences.xml
+@@ -81,6 +81,21 @@
+             app:summary="@string/socks5_proxy_summary"
+             app:title="@string/socks5_proxy" />
+ 
++        <EditTextPreference
++            android:icon="@drawable/baseline_person_24"
++            app:key="site_username"
++            app:defaultValue=""
++            app:summary="@string/site_login_summary"
++            app:title="@string/site_username" />
++
++        <EditTextPreference
++            android:icon="@drawable/baseline_network_locked_24"
++            app:key="site_password"
++            app:defaultValue=""
++            app:summary="@string/site_login_summary"
++            app:title="@string/site_password"
++            android:inputType="textPassword" />
++
+         <ListPreference
+             android:defaultValue="auto"
+             android:entries="@array/download_types"

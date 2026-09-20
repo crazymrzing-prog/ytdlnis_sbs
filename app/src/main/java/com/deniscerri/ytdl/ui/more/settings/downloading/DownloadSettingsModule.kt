@@ -255,6 +255,28 @@ object DownloadSettingsModule : SettingModule {
                     }
                 }
             }
+            "site_username" -> {
+                (pref as EditTextPreference).apply {
+                    val s = context.getString(R.string.site_login_summary)
+                    summary = if (text.isNullOrBlank()) s else "${s}\n[${text}]"
+                    setOnPreferenceChangeListener { _, newValue ->
+                        summary = if ((newValue as String?).isNullOrBlank()) s else "${s}\n[${newValue}]"
+                        host.refreshUI()
+                        true
+                    }
+                }
+            }
+            "site_password" -> {
+                (pref as EditTextPreference).apply {
+                    val s = context.getString(R.string.site_login_summary)
+                    summary = if (text.isNullOrBlank()) s else "${s}\n[set]"
+                    setOnPreferenceChangeListener { _, newValue ->
+                        summary = if ((newValue as String?).isNullOrBlank()) s else "${s}\n[set]"
+                        host.refreshUI()
+                        true
+                    }
+                }
+            }
             "preferred_download_type" -> {
                 (pref as ListPreference).apply {
                     val s = context.getString(R.string.preferred_download_type_summary)

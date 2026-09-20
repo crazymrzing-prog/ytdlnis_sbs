@@ -266,6 +266,9 @@
     <string name="backup_restore">Backup and restore</string>
     <string name="socks5_proxy_summary">Use the specified HTTP/HTTPS/SOCKS proxy</string>
     <string name="socks5_proxy">SOCKS5 proxy URL</string>
+    <string name="site_username">Site username</string>
+    <string name="site_password">Site password</string>
+    <string name="site_login_summary">Used for sites yt-dlp supports native login on. Stored unencrypted.</string>
     <string name="search_suggestions">Search suggestions</string>
     <string name="search_suggestions_summary">Get search suggestions from Google</string>
     <string name="preferred_format_id_summary">Select the format with this ID in the download card</string>

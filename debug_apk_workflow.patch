@@ -1,0 +1,35 @@
+diff --git a/.github/workflows/debug-apk.yml b/.github/workflows/debug-apk.yml
+new file mode 100644
+index 0000000..cc8c7cd
+--- /dev/null
++++ b/.github/workflows/debug-apk.yml
+@@ -0,0 +1,29 @@
++name: Build Debug APK
++
++on:
++  workflow_dispatch:
++
++jobs:
++  build:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - name: Set up JDK 17
++        uses: actions/setup-java@v4
++        with:
++          java-version: 17
++          distribution: 'corretto'
++          cache: 'gradle'
++
++      - name: Make gradlew executable
++        run: chmod +x gradlew
++
++      - name: Build debug APK
++        run: ./gradlew assembleGithubDebug --warning-mode all
++
++      - name: Upload APK
++        uses: actions/upload-artifact@v4
++        with:
++          name: YTDLNIS_SBS-debug
++          path: app/build/outputs/apk/github/debug/*.apk

@@ -1,0 +1,13 @@
+diff --git a/.github/workflows/debug-apk.yml b/.github/workflows/debug-apk.yml
+--- a/.github/workflows/debug-apk.yml
++++ b/.github/workflows/debug-apk.yml
+@@ -19,6 +19,9 @@
+       - name: Make gradlew executable
+         run: chmod +x gradlew
+ 
++      - name: Create empty local.properties
++        run: touch local.properties
++
+       - name: Build debug APK
+         run: ./gradlew assembleGithubDebug --warning-mode all
+ 

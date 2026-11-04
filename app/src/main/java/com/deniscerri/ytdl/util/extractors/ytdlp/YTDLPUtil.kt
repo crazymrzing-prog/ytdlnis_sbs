@@ -40,6 +40,10 @@ import com.google.gson.Strictness
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -66,7 +70,13 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         addOption("--ignore-errors")
         addOption("--no-warnings")
         addOption("-R", "1")
-        addOption("--compat-options", "manifest-filesize-approx")
+
+        val compatOptions = mutableListOf("manifest-filesize-approx")
+        if (url?.isYoutubeURL() == true) {
+            compatOptions.add("no-youtube-unavailable-videos")
+        }
+        addOption("--compat-options", compatOptions.joinToString(","))
+
         val socketTimeout = sharedPreferences.getString("socket_timeout", "5")!!.ifEmpty { "5" }
         addOption("--socket-timeout", socketTimeout)
 
@@ -175,7 +185,11 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
 
         val finalResults = mutableListOf<ResultItem>()
         var postedProgress = false
-        RuntimeManager.getInstance().execute(request) { progress, _, line ->
+        // callbacks run on the stdout reader thread inside runBlocking, which doesn't see the caller being cancelled
+        val callerJob = currentCoroutineContext().job
+        RuntimeManager.getInstance().runKillable { processId ->
+        RuntimeManager.getInstance().execute(request, processId) { progress, _, line ->
+            if (!callerJob.isActive) return@execute
             runCatching {
                 val generatedResults = parseYTDLPListResults(listOf(line))
                 if (generatedResults.isNotEmpty()) {
@@ -202,7 +216,9 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
                 }
             }
         }
+        }
 
+        currentCoroutineContext().ensureActive()
         if (!postedProgress) resultsGenerated(finalResults)
         return finalResults
     }
@@ -337,14 +353,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         return items
     }
 
-    fun getYoutubeWatchLater() : ArrayList<ResultItem> {
+    suspend fun getYoutubeWatchLater() : ArrayList<ResultItem> {
         val request = YTDLRequest(listOf())
         request.setYoutubeExtractorArgs(null)
         request.addOption( "-j")
         request.addOption("--flat-playlist")
         request.applyDefaultOptionsForFetchingData(null)
         request.addOption(":ytwatchlater")
-        val ytdlResponse = RuntimeManager.getInstance().execute(request)
+        val ytdlResponse = RuntimeManager.getInstance().runKillable { processId ->
+            RuntimeManager.getInstance().execute(request, processId)
+        }
         val results: List<String?> = try {
             val lineSeparator = System.getProperty("line.separator")
             ytdlResponse.out.split(lineSeparator!!)
@@ -356,14 +374,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         return parseYTDLPListResults(results)
     }
 
-    fun getYoutubeRecommendations() : ArrayList<ResultItem> {
+    suspend fun getYoutubeRecommendations() : ArrayList<ResultItem> {
         val request = YTDLRequest(listOf())
         request.setYoutubeExtractorArgs(null)
         request.addOption( "-j")
         request.addOption("--flat-playlist")
         request.applyDefaultOptionsForFetchingData(null)
         request.addOption(":ytrec")
-        val ytdlResponse = RuntimeManager.getInstance().execute(request)
+        val ytdlResponse = RuntimeManager.getInstance().runKillable { processId ->
+            RuntimeManager.getInstance().execute(request, processId)
+        }
         val results: List<String?> = try {
             val lineSeparator = System.getProperty("line.separator")
             ytdlResponse.out.split(lineSeparator!!)
@@ -375,14 +395,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         return parseYTDLPListResults(results)
     }
 
-    fun getYoutubeLikedVideos() : ArrayList<ResultItem> {
+    suspend fun getYoutubeLikedVideos() : ArrayList<ResultItem> {
         val request = YTDLRequest(listOf())
         request.setYoutubeExtractorArgs(null)
         request.addOption( "-j")
         request.addOption("--flat-playlist")
         request.applyDefaultOptionsForFetchingData(null)
         request.addOption(":ytfav")
-        val ytdlResponse = RuntimeManager.getInstance().execute(request)
+        val ytdlResponse = RuntimeManager.getInstance().runKillable { processId ->
+            RuntimeManager.getInstance().execute(request, processId)
+        }
         val results: List<String?> = try {
             val lineSeparator = System.getProperty("line.separator")
             ytdlResponse.out.split(lineSeparator!!)
@@ -394,14 +416,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         return parseYTDLPListResults(results)
     }
 
-    fun getYoutubeWatchHistory() : ArrayList<ResultItem> {
+    suspend fun getYoutubeWatchHistory() : ArrayList<ResultItem> {
         val request = YTDLRequest(listOf())
         request.setYoutubeExtractorArgs(null)
         request.addOption( "-j")
         request.addOption("--flat-playlist")
         request.applyDefaultOptionsForFetchingData(null)
         request.addOption(":ythis")
-        val ytdlResponse = RuntimeManager.getInstance().execute(request)
+        val ytdlResponse = RuntimeManager.getInstance().runKillable { processId ->
+            RuntimeManager.getInstance().execute(request, processId)
+        }
         val results: List<String?> = try {
             val lineSeparator = System.getProperty("line.separator")
             ytdlResponse.out.split(lineSeparator!!)
@@ -440,7 +464,10 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
             println(txt)
 
             var urlIdx = 0
-            RuntimeManager.getInstance().execute(request){ progress, _, line ->
+            val callerJob = currentCoroutineContext().job
+            RuntimeManager.getInstance().runKillable { processId ->
+            RuntimeManager.getInstance().execute(request, processId){ progress, _, line ->
+                if (!callerJob.isActive) return@execute
                 try{
                     if (line.isNotBlank()){
                         val url = urls[urlIdx]
@@ -463,7 +490,9 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
                 }
                 urlIdx++
             }
+            }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.message?.split(System.lineSeparator())?.onEach { line ->
                 println(line)
                 if (line.contains("unavailable")) {
@@ -484,9 +513,12 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
 
             }
 
-            handler.post {
-                Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
+            e.message?.apply {
+                handler.post {
+                    Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
+                }
             }
+
             e.printStackTrace()
             return Result.failure(e)
         } finally {
@@ -496,7 +528,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         return Result.success(formatCollection)
     }
 
-    fun getFormats(url: String) : List<Format> {
+    suspend fun getFormats(url: String, ignoreInfoJSON: Boolean) : List<Format> {
         val request = YTDLRequest(url)
         request.addOption("--print", "%(formats)j")
         request.addOption("--print", "%(duration)s")
@@ -507,8 +539,10 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         if (!request.hasOption("--no-check-certificates")) request.addOption("--no-check-certificates")
 
         val canUseWriteInfoJson =
+            !ignoreInfoJSON &&
             !sharedPreferences.getBoolean("disable_write_info_json", false) &&
-                    !request.toString().contains("--download-sections")
+            !request.toString().contains("--download-sections")
+
         if (canUseWriteInfoJson) {
             val infoJsonFile = getInfoJsonFile(url)
             //ignore info file if its older than 5 hours. puny measure to prevent expired formats in some cases
@@ -520,13 +554,16 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         }
 
         val formats = try {
-            RuntimeManager.getInstance().executeStreaming(request) { stream ->
-                JsonReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { reader ->
-                    reader.strictness = Strictness.LENIENT
-                    readFormatsList(reader)
+            RuntimeManager.getInstance().runKillable { processId ->
+                RuntimeManager.getInstance().executeStreaming(request, processId) { stream ->
+                    JsonReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { reader ->
+                        reader.strictness = Strictness.LENIENT
+                        readFormatsList(reader)
+                    }
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             arrayListOf()
         }
 
@@ -581,12 +618,19 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         runCatching {
             if (format.get("filesize_approx").toString() == "None") format.remove("filesize_approx")
         }
+
+        val exactSize = format.optLong("filesize").takeIf { it > 0L }
+        val reportedApprox = format.optLong("filesize_approx").takeIf { it > 0L }
+
         runCatching {
             if (format.get("format_note").toString() == "null") format.remove("format_note")
         }
 
         val formatProper = Gson().fromJson(format.toString(), Format::class.java)
         if (formatProper.format_note == null) formatProper.format_note = ""
+
+        formatProper.filesize = exactSize ?: reportedApprox ?: 0
+        formatProper.isFilesizeApprox = exactSize == null
 
         val resolution = format.optString("resolution")
         if (format.has("format_note")) {
@@ -635,7 +679,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
     }
 
 
-    fun getStreamingUrlAndChapters(url: String) : Result<Pair<List<String>, List<ChapterItem>?>> {
+    suspend fun getStreamingUrlAndChapters(url: String) : Result<Pair<List<String>, List<ChapterItem>?>> {
         try {
             val request = YTDLRequest(url)
             //request.addOption("--get-url")
@@ -646,7 +690,9 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
                 request.setYoutubeExtractorArgs(url)
             }
 
-            val ytdlResponse = RuntimeManager.getInstance().execute(request)
+            val ytdlResponse = RuntimeManager.getInstance().runKillable { processId ->
+                RuntimeManager.getInstance().execute(request, processId)
+            }
             val json = JSONObject(ytdlResponse.out)
             val urls = if (json.has("urls")) {
                 json.getString("urls").split("\n")
@@ -671,6 +717,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
             return Result.success(Pair(urls, chapters))
 
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             return Result.failure(e)
         }
     }
@@ -891,11 +938,19 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         )
     }
 
+    private fun setMetadataArg(field: String, value: String): String {
+        val from = " " + value.replace("%", "%%").replace(":", "\\:")
+        return from.replace("\\", "\\\\") + ":" + field
+    }
+
     private fun StringJoiner.addOption(vararg elements: Any) {
         this.add(elements.first().toString())
         if (elements.size > 1) {
             for (el in elements.drop(1)) {
                 val arg = el.toString()
+                    // not escaped here: it would change the text of every command (the \s, \d in the metadata
+                    // regexes), which shows in logs and breaks the history duplicate check against older
+                    // downloads. Values that can contain backslashes escape them themselves (setMetadataArg).
                     //.replace("\\", "\\\\")
                     .replace("\"", "\\\"")
 
@@ -948,9 +1003,8 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         }
 
         if (downloadItem.playlistTitle.isNotBlank() && useItemURL) {
-            metadataCommands.addOption("--parse-metadata", " :%(playlist_title)s")
-            metadataCommands.addOption("--parse-metadata", "%(playlist_title)s:%(playlist)s")
-            metadataCommands.addOption("--replace-in-metadata", "playlist,playlist_title", "^.*$", downloadItem.playlistTitle)
+            metadataCommands.addOption("--parse-metadata", setMetadataArg("playlist_title", downloadItem.playlistTitle))
+            metadataCommands.addOption("--parse-metadata", setMetadataArg("playlist", downloadItem.playlistTitle))
         }
 
         if (downloadItem.playlistIndex != null) {
@@ -965,20 +1019,22 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
 
         val type = downloadItem.type
 
-        val downDir : File
-        val canWrite = File(FileUtil.formatPath(downloadItem.downloadPath)).canWrite()
+        val targetDir = File(FileUtil.formatPath(downloadItem.downloadPath))
+        val cacheDownloads = sharedPreferences.getBoolean("cache_downloads", true)
         val writtenPath = type == DownloadType.command && downloadItem.format.format_note.contains("-P ")
 
-        if (writtenPath || (!sharedPreferences.getBoolean("cache_downloads", true) && canWrite)){
-            downDir = File(FileUtil.formatPath(downloadItem.downloadPath))
+        val writeDirectly = writtenPath || (!cacheDownloads && targetDir.canWrite())
+        val downDir: File
+        if (writeDirectly) {
+            downDir = targetDir
             request.addOption("--no-quiet")
             request.addOption("--no-simulate")
             request.addOption("--print", "after_move:'%(filepath,_filename)s'")
-        }else{
-            val cacheDir = FileUtil.getCacheDownloadsPath(context)
-            downDir = File(cacheDir, downloadItem.id.toString())
-            downDir.delete()
-            downDir.mkdirs()
+        } else {
+            // keep existing partial files so paused/failed downloads can resume with the same id
+            downDir = File(FileUtil.getCacheDownloadsPath(context), downloadItem.id.toString()).apply {
+                mkdirs()
+            }
         }
 
         val aria2 = sharedPreferences.getBoolean("aria2", false)
@@ -1092,7 +1148,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
             }
 
             if(downloadItem.title.isNotBlank()){
-                metadataCommands.addOption("--replace-in-metadata", "title", """^.*$""", downloadItem.title.replace("""\""", """\\"""))
+                metadataCommands.addOption("--parse-metadata", setMetadataArg("title", downloadItem.title))
                 metadataCommands.addOption("--parse-metadata", "%(title)s:%(meta_title)s")
             }
 
@@ -1100,22 +1156,27 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
             metadataCommands.addOption("--parse-metadata", """%(${useArtistTags}uploader,channel,creator|)l:^(?P<uploader>.*?)(?:(?= - Topic)|$)""")
 
             if (downloadItem.author.isNotBlank()){
-                metadataCommands.addOption("--replace-in-metadata", "uploader", """^.*$""", downloadItem.author.replace("""\""", """\\"""))
+                metadataCommands.addOption("--parse-metadata", setMetadataArg("uploader", downloadItem.author))
                 metadataCommands.addOption("--parse-metadata", "%(uploader)s:%(artist)s")
             }
 
             if (downloadItem.downloadSections.isNotBlank()){
-                downloadItem.downloadSections.split(";").forEach {
-                    if (it.isBlank()) return@forEach
+                val sections = downloadItem.downloadSections.split(";").filter { it.isNotBlank() }
+                sections.forEach {
                     request.addOption("--download-sections", "*${it.split(" ")[0]}")
+                }
 
+                if (sections.isNotEmpty()) {
                     if (sharedPreferences.getBoolean("force_keyframes", false) && !request.toString().contains("--force-keyframes-at-cuts")){
                         request.addOption("--force-keyframes-at-cuts")
                     }
                 }
 
-                if (downloadItem.downloadSections.split(";").size > 1){
+                if (sections.size > 1){
                     filenameTemplate = "%(autonumber)d. $filenameTemplate [%(section_start>%H∶%M∶%S)s]"
+                    if (downloadItem.mergeCuts) {
+                        request.addOption("--use-postprocessor", "SectionMerge:when=post_process;count=${sections.size}")
+                    }
                 }
             }
 
@@ -1269,27 +1330,19 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
 
                         val emptyAuthor = downloadItem.author.isEmpty()
                         val usePlaylistMetadata = sharedPreferences.getBoolean("playlist_as_album", true)
+                        val allArtistsInAlbumArtist = sharedPreferences.getBoolean("all_artists_in_album_artist", false)
 
-                        if (emptyAuthor) {
-                            if (usePlaylistMetadata) {
-                                metadataCommands.addOption("--parse-metadata", "%(playlist_uploader,artist,uploader|)s:^(?P<first_artist>.*?)(?:(?=,\\s+)|$)")
-                            }else{
-                                metadataCommands.addOption("--parse-metadata", "%(artist,uploader|)s:^(?P<first_artist>.*?)(?:(?=,\\s+)|$)")
-                            }
-                        }else{
-                            if (usePlaylistMetadata) {
-                                metadataCommands.addOption("--parse-metadata", "%(playlist_uploader,artist|)s:^(?P<first_artist>.*?)(?:(?=,\\s+)|$)")
-                            }else{
-                                metadataCommands.addOption("--parse-metadata", "%(artist|)s:^(?P<first_artist>.*?)(?:(?=,\\s+)|$)")
-                            }
-                        }
+                        // album artist fallback: the first of the artists, or all of them (some players group albums by the full list)
+                        val artistFields = listOfNotNull("playlist_uploader".takeIf { usePlaylistMetadata }, "artist", "uploader".takeIf { emptyAuthor }).joinToString(",")
+                        val artistPattern = if (allArtistsInAlbumArtist) "(?P<default_album_artist>.*)" else "^(?P<default_album_artist>.*?)(?:(?=,\\s+)|$)"
+                        metadataCommands.addOption("--parse-metadata", "%($artistFields|)s:$artistPattern")
 
                         if (usePlaylistMetadata) {
                             metadataCommands.addOption("--parse-metadata", "%(album,playlist_title,playlist|)s:%(meta_album)s")
                         }
 
 
-                        metadataCommands.addOption("--parse-metadata", "%(album_artist,first_artist|)s:%(album_artist)s")
+                        metadataCommands.addOption("--parse-metadata", "%(album_artist,default_album_artist|)s:%(album_artist)s")
                         metadataCommands.addOption("--parse-metadata", "%(release_year,release_date>%Y,upload_date>%Y)s:(?P<meta_date>\\d+)")
 
                         if (isPlaylistItem) {
@@ -1322,6 +1375,20 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
                     if (filenameTemplate.isNotBlank()){
                         request.addOption("-o", "${filenameTemplate.removeSuffix(".%(ext)s")}.%(ext)s")
                     }
+
+                    //lyrics timing and duration only make sense for the full track
+                    val audioPrefs = downloadItem.audioPreferences
+                    if ((audioPrefs.embedLyrics || audioPrefs.saveLrc) && downloadItem.downloadSections.isBlank()) {
+                        val args = mutableListOf(
+                            //after_move so it runs once audio extraction, metadata and thumbnail are done
+                            "when=after_move",
+                            "embed=${if (audioPrefs.embedLyrics) 1 else 0}",
+                            "lrc=${if (audioPrefs.saveLrc) 1 else 0}",
+                            "offset=${audioPrefs.lyricsOffset}"
+                        )
+                        if (audioPrefs.lyricsId > 0) args.add("id=${audioPrefs.lyricsId}")
+                        request.addOption("--use-postprocessor", "Lyrics:${args.joinToString(";")}")
+                    }
                 }
 
                 if (downloadItem.audioPreferences.bitrate.isNotBlank()) {
@@ -1332,7 +1399,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
             DownloadType.video -> {
                 val supportedContainers = context.resources.getStringArray(R.array.video_containers)
 
-                if (downloadItem.videoPreferences.addChapters) {
+                if (downloadItem.videoPreferences.addChapters && downloadItem.downloadSections.isBlank()) {
                     if (sharedPreferences.getBoolean("use_sponsorblock", true)){
                         request.addOption("--sponsorblock-mark", "all")
                     }
@@ -1369,7 +1436,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
                 }
 
                 if (downloadItem.videoPreferences.burnSubs) {
-                    request.addOption("--use-postprocessor", "BurnSubs:when=after_move;preset=$internalPluginFFmpegPreset")
+                    request.addOption("--use-postprocessor", "BurnSubs:preset=$internalPluginFFmpegPreset")
                 }
 
                 var cont = ""
@@ -1698,9 +1765,7 @@ class YTDLPUtil(private val context: Context, private val commandTemplateDao: Co
         val conf = File(cache.absolutePath + "/${System.currentTimeMillis()}${UUID.randomUUID()}.txt")
         conf.createNewFile()
         conf.writeText(request.toString())
-        val tmp = mutableListOf<String>()
-        tmp.addOption("--config-locations", conf.absolutePath)
-        ytDlRequest.addCommands(tmp)
+        ytDlRequest.addOption("--config-locations", conf.absolutePath)
 
         val ytdlpCache = File(FileUtil.getCacheYTDLPPath(context))
         ytDlRequest.addOption("--cache-dir", ytdlpCache.absolutePath)

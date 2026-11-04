@@ -37,6 +37,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
 import java.util.Collections
+import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.collections.set
@@ -55,6 +57,14 @@ object RuntimeManager {
     @Volatile
     var initialized = false
         private set
+
+    @Volatile
+    var initError: Throwable? = null
+        private set
+
+    // first launch extracts every package, which can take well over 30 seconds on slow devices
+    @Volatile
+    private var initInProgress = false
 
     private var initLatch = CountDownLatch(1)
     private val initLock = Any()
@@ -77,6 +87,7 @@ object RuntimeManager {
     private var NPM_CONFIG_CACHE: String = ""
     private var NPM_CLI_PATH: String = ""
     private var NODE_OPTIONS: String = ""
+    private var NODE_HOME: String = ""
 
     val packages: List<PackageItem> = listOf(
         PackageItem("Python", Python),
@@ -92,6 +103,7 @@ object RuntimeManager {
         synchronized(initLock) {
             if (initialized) return
 
+            initInProgress = true
             runBlocking(Dispatchers.IO) {
                 try {
                     val baseDir = File(appContext.noBackupFilesDir, BASENAME).apply { if (!exists()) mkdir() }
@@ -128,9 +140,9 @@ object RuntimeManager {
                         pythonLocation,
                         ffmpegLocation,
                         aria2Location,
-                        nodeLocation,
                         quickJsLocation,
                         denoLocation,
+                        nodeLocation,
                     )
 
                     val ldPaths = mutableListOf<String>()
@@ -157,11 +169,7 @@ object RuntimeManager {
 
                     OPEN_SSL_CONF = ""
                     if (nodeLocation.ldDir.exists()) {
-                        OPEN_SSL_CONF = if (nodeLocation.isDownloaded) {
-                            File(nodeLocation.ldDir.parentFile, "usr/etc/tls/openssl.cnf").absolutePath
-                        } else {
-                            nodeLocation.ldDir.absolutePath + "/usr/etc/tls/openssl.cnf"
-                        }
+                        OPEN_SSL_CONF = File(nodeLocation.ldDir, "usr/etc/tls/openssl.cnf").absolutePath
                     }
 
                     ENV_PYTHONHOME = if (pythonLocation.isDownloaded) {
@@ -173,23 +181,31 @@ object RuntimeManager {
 
                     NPM_CONFIG_PREFIX = File(appContext.filesDir, ".npm-global").absolutePath
                     NPM_CONFIG_CACHE = File(appContext.filesDir, ".npm-cache").absolutePath
-                    //TODO
-//            if (nodeLocation.executable.exists()) {
-//                NPM_CLI_PATH = File(nodeLocation.ldDir.absolutePath, "usr/lib/node_modules/npm/bin/npm-cli.js").absolutePath
-//
-//                val optionsFile = File(appContext.filesDir, "node_dns_setup.js")
-//                optionsFile.writeText(NodeJS.getDNSSetup())
-//                NODE_OPTIONS = "--require ${optionsFile.absolutePath}"
-//            }
+                    // node and npm write config/cache into HOME, give them a dedicated writable dir
+                    // the python HOME points into the package folder which gets wiped on package updates
+                    NODE_HOME = File(appContext.filesDir, "node_home").absolutePath
+                    listOf(NODE_HOME, NPM_CONFIG_PREFIX, NPM_CONFIG_CACHE).forEach { File(it).mkdirs() }
+
+                    if (nodeLocation.executable.exists()) {
+                        NPM_CLI_PATH = File(nodeLocation.ldDir, "usr/lib/node_modules/npm/bin/npm-cli.js").absolutePath
+
+                        // android has no resolv.conf so node's default dns resolution fails
+                        val optionsFile = File(appContext.filesDir, "node_dns_setup.js")
+                        optionsFile.writeText(NodeJS.getDNSSetup())
+                        NODE_OPTIONS = "--require ${optionsFile.absolutePath}"
+                    }
 
                     val ytdlpPluginsFolder = File(FileUtil.getBundledYTDLPPluginsPath(appContext))
                     copyAssetFolder(appContext, "yt_dlp_plugins", ytdlpPluginsFolder)
 
+                    initError = null
                     initialized = true
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     e.printStackTrace()
+                    initError = e
                     initialized = false
                 } finally {
+                    initInProgress = false
                     initLatch.countDown()
                     updateLatch.countDown()
                 }
@@ -262,9 +278,19 @@ object RuntimeManager {
     }
 
     fun assertInit() {
-        val success = initLatch.await(30, TimeUnit.SECONDS)
-        if (!success || !initialized) {
-            throw IllegalStateException("Instance not initialized")
+        var success = initLatch.await(30, TimeUnit.SECONDS)
+        // still extracting, keep waiting instead of failing in the middle of it
+        if (!success && initInProgress) {
+            success = initLatch.await(5, TimeUnit.MINUTES)
+        }
+        if (!success) {
+            val state = if (initInProgress) "still running after 5 minutes" else "it was never started"
+            throw IllegalStateException("Instance not initialized: timed out waiting for initialization, $state")
+        }
+        if (!initialized) {
+            val error = initError
+            val reason = error?.let { "${it.javaClass.simpleName}: ${it.message}" } ?: "unknown error"
+            throw IllegalStateException("Instance not initialized: $reason", error)
         }
     }
 
@@ -299,24 +325,96 @@ object RuntimeManager {
                 alive = p!!.isAlive
             }
             if (alive) {
-                destroyChildProcesses(id)
-                p?.destroy()
+                // remove first so the executing thread treats the exit as a cancellation and not as a failure
                 idProcessMap.remove(id)
+                p?.let { destroyProcessTree(it) }
                 return true
             }
         }
         return false
     }
 
-    private fun destroyChildProcesses(id: String) : Boolean {
-        try {
-            val command = "pstree -p $id | grep -oP '\\(\\K[^\\)]+' | xargs kill"
-            val processBuilder = ProcessBuilder("/system/bin/sh", "-c", command)
-            val process = processBuilder.start()
-            val res = process.waitFor()
-            return res == 0
-        }catch (e: Exception) {
-            return false
+    /**
+     * Kills the process together with everything it spawned (ffmpeg, aria2c, js runtimes used by yt-dlp etc.).
+     * Process.destroy() alone only kills python and leaves its children running
+     */
+    private fun destroyProcessTree(process: Process) {
+        val pid = process.pidOrNull()
+        if (pid != null) {
+            descendantPids(pid).forEach { child ->
+                runCatching { android.os.Process.killProcess(child) }
+            }
+        }
+        process.destroy()
+    }
+
+    private fun Process.pidOrNull() : Int? = runCatching {
+        val field = javaClass.getDeclaredField("pid")
+        field.isAccessible = true
+        field.getInt(this)
+    }.getOrNull() ?: runCatching {
+        // android's process implementation prints itself as "Process[pid=123, hasExited=false]"
+        Regex("""pid=(\d+)""").find(toString())?.groupValues?.get(1)?.toInt()
+    }.getOrNull()
+
+    private fun descendantPids(rootPid: Int) : List<Int> {
+        val childrenByParent = mutableMapOf<Int, MutableList<Int>>()
+        File("/proc").listFiles()?.forEach { dir ->
+            val pid = dir.name.toIntOrNull() ?: return@forEach
+            // format is "pid (comm) state ppid ...", comm can contain spaces so read after the last ')'
+            val stat = runCatching { File(dir, "stat").readText() }.getOrNull() ?: return@forEach
+            val ppid = stat.substringAfterLast(')').trim().split(' ').getOrNull(1)?.toIntOrNull() ?: return@forEach
+            childrenByParent.getOrPut(ppid) { mutableListOf() }.add(pid)
+        }
+
+        val result = mutableListOf<Int>()
+        val queue = ArrayDeque(listOf(rootPid))
+        while (queue.isNotEmpty()) {
+            childrenByParent[queue.removeFirst()]?.forEach {
+                result.add(it)
+                queue.add(it)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Process ids that got cancelled before their process was registered
+     */
+    private val cancelledProcessIds = Collections.synchronizedSet(HashSet<String>())
+
+    private fun registerProcess(processId: String?, process: Process) {
+        if (processId == null) return
+        idProcessMap[processId] = process
+        if (cancelledProcessIds.contains(processId)) {
+            idProcessMap.remove(processId)
+            destroyProcessTree(process)
+            throw CanceledException()
+        }
+    }
+
+    /**
+     * Runs a blocking call (like [execute] or [executeStreaming]) so that cancelling the calling coroutine
+     * also kills the process it started. The block has to pass the given processId to the execute call.
+     * Without this, cancelling only stops the coroutine while yt-dlp keeps running in the background
+     */
+    suspend fun <T> runKillable(block: (processId: String) -> T): T {
+        val processId = "killable_${UUID.randomUUID()}"
+        return coroutineScope {
+            val work = async(Dispatchers.IO) {
+                try {
+                    block(processId)
+                } finally {
+                    cancelledProcessIds.remove(processId)
+                }
+            }
+            try {
+                work.await()
+            } catch (e: CancellationException) {
+                if (!work.isCompleted) cancelledProcessIds.add(processId)
+                destroyProcessById(processId)
+                throw e
+            }
         }
     }
 
@@ -392,7 +490,24 @@ object RuntimeManager {
 
         val fullCommand = mutableListOf<String>(nodeLocation.executable.absolutePath)
         fullCommand.addAll(command.split(" "))
-        return executeImpl(fullCommand, processId, true, executeDirectory = executeDirectory, callback = callback)
+        return executeImpl(fullCommand, processId, true, executeDirectory = executeDirectory, extraEnv = getNodeEnvironment(), callback = callback)
+    }
+
+    /**
+     * Env only applied to node/npm processes. Not global, so the node yt-dlp spawns for js challenges stays untouched
+     */
+    fun getNodeEnvironment() : Map<String, String> {
+        val env = mutableMapOf("HOME" to NODE_HOME)
+        val certFile = listOf(nodeLocation, pythonLocation)
+            .map { File(it.ldDir, "usr/etc/tls/cert.pem") }
+            .firstOrNull { it.exists() }
+            ?: ENV_SSL_CERT_FILE?.let { File(it) }?.takeIf { it.exists() }
+        if (certFile != null) {
+            env["SSL_CERT_FILE"] = certFile.absolutePath
+            env["NODE_EXTRA_CA_CERTS"] = certFile.absolutePath
+        }
+        if (NODE_OPTIONS.isNotEmpty()) env["NODE_OPTIONS"] = NODE_OPTIONS
+        return env
     }
 
     fun executeNpm(
@@ -405,7 +520,7 @@ object RuntimeManager {
 
         val fullCommand = mutableListOf<String>(nodeLocation.executable.absolutePath, NPM_CLI_PATH)
         fullCommand.addAll(command.split(" "))
-        return executeImpl(fullCommand, processId, true, executeDirectory = executeDirectory, callback = callback)
+        return executeImpl(fullCommand, processId, true, executeDirectory = executeDirectory, extraEnv = getNodeEnvironment(), callback = callback)
     }
 
 
@@ -427,6 +542,7 @@ object RuntimeManager {
         processId: String? = null,
         redirectErrorStream: Boolean = false,
         executeDirectory: File? = null,
+        extraEnv: Map<String, String> = emptyMap(),
         callback: ((Float, Long, String) -> Unit)? = null
     ) : ExecuteResponse {
 
@@ -438,6 +554,7 @@ object RuntimeManager {
         val processBuilder = ProcessBuilder(fullCommand).redirectErrorStream(redirectErrorStream)
 
         processBuilder.environment().putAll(getEnvironment())
+        processBuilder.environment().putAll(extraEnv)
 
         val outBuffer = StringBuffer()
         val errBuffer = StringBuffer()
@@ -447,12 +564,11 @@ object RuntimeManager {
         }
 
         val process = try {
-            processBuilder.start().also {
-                if (processId != null) idProcessMap[processId] = it
-            }
+            processBuilder.start()
         } catch (e: IOException) {
             throw ExecuteException(e)
         }
+        registerProcess(processId, process)
 
         return try {
             val stdOutProcessor = StreamProcessExtractor(outBuffer, process.inputStream, callback)
@@ -499,13 +615,13 @@ object RuntimeManager {
             processBuilder.directory(executeDirectory)
         }
 
-        return try {
-            processBuilder.start().also {
-                if (processId != null) idProcessMap[processId] = it
-            }
+        val process = try {
+            processBuilder.start()
         } catch (e: IOException) {
             throw ExecuteException(e)
         }
+        registerProcess(processId, process)
+        return process
     }
 
     fun <T> executeStreaming(
@@ -576,7 +692,9 @@ object RuntimeManager {
 
     fun getEnvironmentForTerminal(): MutableMap<String, String?> {
         val env = getEnvironment().toMutableMap()
-        env["HOME"] = Environment.getExternalStorageDirectory().path
+        val homePath = FileUtil.getDefaultTerminalPath()
+        File(homePath).mkdirs()
+        env["HOME"] = homePath
         return env
     }
 

@@ -46,12 +46,11 @@
     <string name="remove_duplicates">Poista kopiot</string>
     <string name="configure_download">Muuta latausta</string>
     <string name="title">Otsikko</string>
-    <string name="Open_File">Avaa tiedosto</string>
+    <string name="open_file">Avaa tiedosto</string>
     <string name="delete_file_too">Poista tiedosto laitteelta</string>
     <string name="sponsorblock_nonmusic">Muut kuin musiikki ja off-topic-osiot</string>
     <string name="edit_selected">Muokkaa valittuja</string>
     <string name="adjust_video">Muokkaa videota</string>
-    <string name="update_ytdl_nightly">Yöllinen versio yt-dlp:stä</string>
     <string name="update_formats">Päivitä formaatit</string>
     <string name="log_downloads">Tallenna lataukset lokitiedostoon</string>
     <string name="update_template">Päivitä malli</string>
@@ -321,8 +320,6 @@
     <string name="modify_download_card">Muokkaa latauskorttia</string>
     <string name="export_file">Vie tiedosto</string>
     <string name="ytdl_source">yt-dlp:n lähde</string>
-    <string name="update_ytdl_master">yt-dlp:n master-versio</string>
-    <string name="update_ytdl_stable">yt-dlp:n vakaa versio</string>
     <string name="buffer_size">Puskurin koko</string>
     <string name="buffer_size_summary">Latauspuskurin koko, esim. 1024 tai 16K (oletus 1024)</string>
     <string name="preferred_audio_language">Ensisijainen äänen kieli</string>
@@ -454,7 +451,7 @@
     <string name="prefer_container_over_codec_audio">Suosi konttia koodekin yli äänilatauksissa</string>
     <string name="prefer_container_over_codec_audio_summary">Tämän ollessa käytössä ensisijaisen äänikoodekin asetus ohitetaan ja vain kontti muuttuu</string>
     <string name="player_client">Soitinasiakas</string>
-    <string name="player_client_summary"><![CDATA[YouTuben soitinasiakkaat ja PO-token]]></string>
+    <string name="player_client_summary">YouTuben soitinasiakkaat ja PO-token</string>
     <string name="use_app_language_for_metadata">Käytä sovelluksen kieltä metatiedoille</string>
     <string name="layout">Asettelu</string>
     <string name="list">Lista</string>

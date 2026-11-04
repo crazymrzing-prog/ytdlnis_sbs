@@ -42,7 +42,6 @@
     <string name="downloads_running_try_later">Програм за преузимање је покренут. Покушајте поново касније</string>
     <string name="quick_download">Брзо преузимање</string>
     <string name="new_template">Нови шаблон</string>
-    <string name="update_ytdl_nightly">Ноћна верзија yt-dlp-а</string>
     <string name="command_download_notification_channel_description">Обавештење које приказује напредак преузимања помоћу команде yt-dlp</string>
     <string name="add_chapters">Поглавља у видео снимцима</string>
     <string name="concurrent_downloads_summary">Број преузимања која се извршавају у исто време</string>
@@ -128,7 +127,7 @@
     <string name="end">Крај</string>
     <string name="create_template">Направи шаблон</string>
     <string name="freespace">Слободна меморија</string>
-    <string name="Open_File">Отвори фајл</string>
+    <string name="open_file">Отвори фајл</string>
     <string name="start">Почетак</string>
     <string name="backup_restore">Резервна копија и враћање података</string>
     <string name="you_are_going_to_delete">Брисање</string>
@@ -314,14 +313,12 @@
     <string name="preferred_search_engine">Преферирани претраживач</string>
     <string name="couldnt_parse_file">Није могуће рашчланити фајл</string>
     <string name="embed_subs_summary">Додајте титлове у видео снимак</string>
-    <string name="update_ytdl_master">Главна верзија yt-dlp</string>
     <string name="errored_downloads">Неисправна преузимања</string>
     <string name="errored_download_notification_channel_description">Обавештење о неисправним преузимањима</string>
     <string name="ytdl_source">Извор yt-dlp</string>
     <string name="buffer_size_summary">Величина бафера преузимања, нпр. 1024 или 16К (подразумевано је 1024)</string>
     <string name="buffer_size">Величина бафера</string>
     <string name="preferred_audio_language">Преферирани језик аудио снимка</string>
-    <string name="update_ytdl_stable">Стабилна верзија yt-dlp</string>
     <string name="changelog">Евиденција промена</string>
     <string name="app">Апликација</string>
     <string name="source">Извор</string>
@@ -448,7 +445,7 @@
     <string name="minutes">Минути</string>
     <string name="prefer_container_over_codec_audio_summary">Када је ово омогућено, преферирани аудио кодек ће бити занемарен и само ће се контејнер променити</string>
     <string name="player_client">Клијент плејера</string>
-    <string name="player_client_summary"><![CDATA[Клијенти плејера YouTube-а и токен PO]]></string>
+    <string name="player_client_summary">Клијенти плејера YouTube-а и токен PO</string>
     <string name="use_app_language_for_metadata">Користи језик апликације за метаподатке</string>
     <string name="layout">Изглед</string>
     <string name="list">Листа</string>

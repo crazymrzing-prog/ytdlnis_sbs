@@ -42,11 +42,13 @@ class UpdateUtil(var context: Context) {
     fun tryGetNewVersion() : Result<GithubRelease> {
         try {
             val skippedVersions = sharedPreferences.getString("skip_updates", "")?.split(",")?.distinct()?.toMutableList() ?: mutableListOf()
+            if (sharedPreferences.getBoolean("update_nightly", false)) return tryGetNewNightly(skippedVersions)
             val res = getGithubReleases()
 
             if (res.isEmpty()){
                 return Result.failure(Error(context.getString(R.string.network_error)))
             }
+            sharedPreferences.edit().putLong(APP_LAST_CHECK_KEY, System.currentTimeMillis()).apply()
 
             val currentVersion = BuildConfig.VERSION_NAME
             val currentVerNumber = currentVersion.tagNameToVersionNumber()
@@ -90,13 +92,28 @@ class UpdateUtil(var context: Context) {
         }
     }
 
-    fun getGithubReleases(): List<GithubRelease> {
-        val url = "https://api.github.com/repos/deniscerri/ytdlnis/releases"
+    private fun tryGetNewNightly(skippedVersions: List<String>) : Result<GithubRelease> {
+        val res = fetchReleases()
+        if (res.isEmpty()) return Result.failure(Error(context.getString(R.string.network_error)))
+        sharedPreferences.edit().putLong(APP_LAST_CHECK_KEY, System.currentTimeMillis()).apply()
+
+        // nightlies share the stable version name, so a nightly is new if it was published after this app was installed/updated
+        val installedAt = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+        val nightly = res.firstOrNull { it.tag_name.startsWith("nightly-") }
+        if (nightly == null || nightly.published_at.time <= installedAt || skippedVersions.contains(nightly.tag_name)) {
+            return Result.failure(Error(context.getString(R.string.you_are_in_latest_version)))
+        }
+        return Result.success(nightly)
+    }
+
+    // the nightly pre-release isn't versioned, keep it out of the stable/beta checks and the changelog
+    fun getGithubReleases(): List<GithubRelease> = fetchReleases().filter { !it.tag_name.startsWith("nightly-") }
+
+    private fun fetchReleases(): List<GithubRelease> {
         val conn: HttpURLConnection
         var json = listOf<GithubRelease>()
         try {
-            val req = URL(url)
-            conn = req.openConnection() as HttpURLConnection
+            conn = URL(RELEASES_URL).openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.connectTimeout = 10000
             conn.readTimeout = 5000
@@ -130,9 +147,9 @@ class UpdateUtil(var context: Context) {
             updatingYTDL = true
 
             try {
-                val channel = if (c.isNullOrBlank()) sharedPreferences.getString("ytdlp_source", "stable") else c
+                val channel = if (c.isNullOrBlank()) sharedPreferences.getString("ytdlp_source", "nightly") else c
 
-                when(channel) {
+                val response = when(channel) {
                     "stable", "nightly", "master" -> {
                         val res = RuntimeManager.getInstance().updateYTDL(context, channelMap[channel]!!)
                         if (res != RuntimeManager.UpdateStatus.DONE) {
@@ -156,6 +173,11 @@ class UpdateUtil(var context: Context) {
                         }
                     }
                 }
+
+                if (response.status == YTDLPUpdateStatus.DONE || response.status == YTDLPUpdateStatus.ALREADY_UP_TO_DATE) {
+                    sharedPreferences.edit().putLong(YTDLP_LAST_CHECK_KEY, System.currentTimeMillis()).apply()
+                }
+                response
             } finally {
                 updatingYTDL = false
             }
@@ -213,6 +235,9 @@ class UpdateUtil(var context: Context) {
     }
 
     companion object {
+        const val RELEASES_URL = "https://api.github.com/repos/deniscerri/ytdlnis/releases"
+        const val APP_LAST_CHECK_KEY = "app_last_update_check"
+        const val YTDLP_LAST_CHECK_KEY = "ytdlp_last_update_check"
         var updatingYTDL = false
         var updatingApp = false
     }

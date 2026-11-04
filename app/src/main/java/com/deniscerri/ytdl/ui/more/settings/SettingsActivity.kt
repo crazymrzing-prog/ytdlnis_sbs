@@ -74,9 +74,12 @@ class SettingsActivity : BaseActivity(), SettingHost {
     private val xmlToNavId = mapOf(
         R.xml.general_preferences to R.id.appearanceSettingsFragment,
         R.xml.folders_preference to R.id.folderSettingsFragment,
+        R.xml.temporary_files_preferences to R.id.temporaryFilesFragment,
         R.xml.downloading_preferences to R.id.downloadSettingsFragment,
         R.xml.processing_preferences to R.id.processingSettingsFragment,
         R.xml.updating_preferences to R.id.updateSettingsFragment,
+        R.xml.ytdlp_update_preferences to R.id.ytdlpUpdateSettingsFragment,
+        R.xml.app_update_preferences to R.id.appUpdateSettingsFragment,
         R.xml.advanced_preferences to R.id.advancedSettingsFragment,
     )
     fun getDestinationIdForXml(xmlRes: Int): Int = xmlToNavId[xmlRes] ?: R.id.mainSettingsFragment

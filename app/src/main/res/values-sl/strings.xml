@@ -132,7 +132,7 @@
     <string name="incognito_summary">Prenesi brez dodajanja v zgodovino</string>
     <string name="configure_download">Prilagodi prenos</string>
     <string name="title">Naslov</string>
-    <string name="Open_File">Odpri datoteko</string>
+    <string name="open_file">Odpri datoteko</string>
     <string name="you_are_going_to_delete_multiple_items">Brisanje več elementov</string>
     <string name="delete_file_too">Izbriši datoteko iz naprave</string>
     <string name="delete_files_too">Izbriši datoteke iz naprave</string>
@@ -157,7 +157,6 @@
     <string name="template">Predloga</string>
     <string name="logs">Dnevniki</string>
     <string name="date_added">Datum dodajanja</string>
-    <string name="update_ytdl_nightly">Nočna različica yt-dlp</string>
     <string name="adjust_audio">Prilagodi zvok</string>
     <string name="file_name_template">Predlogi imen datotek</string>
     <string name="language">Jezik</string>
@@ -297,8 +296,6 @@
     <string name="modify_download_card">Uredi kartico za prenos</string>
     <string name="export_file">Izvozi datoteko</string>
     <string name="ytdl_source">vir yt-dlp</string>
-    <string name="update_ytdl_master">Glavna različica yt-dlp</string>
-    <string name="update_ytdl_stable">Stabilna različica yt-dlp</string>
     <string name="buffer_size">Velikost medpomnilnika</string>
     <string name="buffer_size_summary">Velikost medpomnilnika za prenos, npr. 1024 ali 16K (privzeto je 1024)</string>
     <string name="preferred_audio_language">Prednostni jezik zvoka</string>
@@ -427,7 +424,7 @@
     <string name="prefer_container_over_codec_audio">Za prenos zvoka raje izberi vsebnik kot kodek</string>
     <string name="prefer_container_over_codec_audio_summary">Če je to omogočeno, bo želeni zvočni kodek prezrt in spremenil se bo le vsebnik</string>
     <string name="player_client">Odjemalec predvajalnika</string>
-    <string name="player_client_summary"><![CDATA[YouTube odjemalci predvajalnika & PO žeton]]></string>
+    <string name="player_client_summary">YouTube odjemalci predvajalnika &amp; PO žeton</string>
     <string name="use_app_language_for_metadata">Za metapodatke uporabi jezik aplikacije</string>
     <string name="layout">Postavitev</string>
     <string name="list">Seznam</string>

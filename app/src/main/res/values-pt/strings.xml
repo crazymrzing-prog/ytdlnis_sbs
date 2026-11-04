@@ -53,7 +53,7 @@
     <string name="downloads">Downloads</string>
     <string name="remove_deleted">Remover excluídos</string>
     <string name="sort_by">Ordenar por</string>
-    <string name="Open_File">Abrir arquivo</string>
+    <string name="open_file">Abrir arquivo</string>
     <string name="download_all">Baixar todos</string>
     <string name="couldnt_find_apk">Não foi possível encontrar o apk adequado</string>
     <string name="downloading_update">Fazendo o download da nova versão</string>
@@ -204,7 +204,6 @@
     <string name="you_are_going_to_delete_multiple_items">Excluir vários itens</string>
     <string name="request_permission_desc">Este aplicativo requer \"Permissão de Armazenamento\" para salvar downloads no dispositivo</string>
     <string name="sponsorblock_nonmusic">Partes sem música e sem relação com o tema</string>
-    <string name="update_ytdl_nightly">Versão beta do yt-dlp</string>
     <string name="adjust_audio">Ajustar áudio</string>
     <string name="file_name_template">Modelo para o nome de arquivo</string>
     <string name="language">Idioma</string>
@@ -314,14 +313,12 @@
     <string name="length">Comprimento</string>
     <string name="export_file">Exportar arquivo</string>
     <string name="ignore">Ignorar</string>
-    <string name="update_ytdl_master">Versão principal do yt-dlp</string>
     <string name="errored_downloads">Downloads com erros</string>
     <string name="errored_download_notification_channel_description">Notificação para downloads com erro</string>
     <string name="ytdl_source">Fonte do yt-dlp</string>
     <string name="buffer_size_summary">Tamanho do buffer para downloads, ex. 1024 ou 16K (o padrão é 1024)</string>
     <string name="buffer_size">Tamanho do buffer</string>
     <string name="preferred_audio_language">Idioma de áudio preferido</string>
-    <string name="update_ytdl_stable">Versão estável do yt-dlp</string>
     <string name="changelog">Histórico de atualização</string>
     <string name="app">Aplicativo</string>
     <string name="source">Origem</string>
@@ -450,7 +447,7 @@
     <string name="prefer_container_over_codec_audio">Preferir o contêiner em vez do codec para downloads de áudio</string>
     <string name="prefer_container_over_codec_audio_summary">Com essa opção habilitada, a preferência do codec de áudio será ignorada e somente o contêiner será alterado</string>
     <string name="player_client">Cliente de reprodução</string>
-    <string name="player_client_summary"><![CDATA[Cliente de reprodução do YouTube & Chave de acesso PO]]></string>
+    <string name="player_client_summary">Cliente de reprodução do YouTube &amp; Chave de acesso PO</string>
     <string name="use_app_language_for_metadata">Usar idioma do aplicativo para metadados</string>
     <string name="layout">Layout</string>
     <string name="list">Lista</string>

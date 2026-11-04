@@ -65,7 +65,6 @@
     <string name="defaultValue">Mod implicit</string>
     <string name="template">Șablon</string>
     <string name="date_added">Data adaugata</string>
-    <string name="update_ytdl_nightly">Versiunea de nightly a yt-dlp</string>
     <string name="adjust_audio">Reglați sunetul</string>
     <string name="command_templates">Șabloane de comandă</string>
     <string name="terminal">Terminal</string>
@@ -162,7 +161,7 @@
     <string name="add_chapter">Adăugați capitole</string>
     <string name="show_download_card">Afișă opțiuni pentru descărcare</string>
     <string name="download_card_summary">Modificați setările pentru acel element înainte de descărcare. Dezactivarea acestei opțiuni începe descărcarea imediat</string>
-    <string name="Open_File">Deschidere fișier</string>
+    <string name="open_file">Deschidere fișier</string>
     <string name="delete_file_too">Ștergeți fișierul de pe dispozitiv</string>
     <string name="edit_selected">Editați selectat</string>
     <string name="update_formats">Actualizare formate</string>
@@ -294,7 +293,6 @@
     <string name="update_app_beta">Versiuni Beta</string>
     <string name="scheduling">Programare</string>
     <string name="schedule">Programați</string>
-    <string name="update_ytdl_master">Versiunea principală pentru yt-dlp</string>
     <string name="update_formats_background">Actualizează formatele în fundal</string>
     <string name="changelog">Jurnal de modificări</string>
     <string name="search_command_hint">Caută din comenzi</string>
@@ -319,7 +317,6 @@
     <string name="source">Sursă</string>
     <string name="remember_download_type_summary">Selectați ultimul tip de descărcare deschis pentru articolul curent</string>
     <string name="length">Lungime</string>
-    <string name="update_ytdl_stable">Versiunea stabilă pentru yt-dlp</string>
     <string name="observe_sources">Observați sursele</string>
     <string name="new_source">Sursă nouă</string>
     <string name="delete_all_sources">Ștergeți toate sursele</string>
@@ -450,7 +447,7 @@
     <string name="prefer_container_over_codec_audio">Preferați containerul în locul codecului pentru descărcările audio</string>
     <string name="prefer_container_over_codec_audio_summary">Dacă această opțiune este activată, preferința pentru codecul audio preferat va fi ignorată și se va schimba doar containerul</string>
     <string name="player_client">Client redare</string>
-    <string name="player_client_summary"><![CDATA[Clienți redare YouTube și token PO]]></string>
+    <string name="player_client_summary">Clienți redare YouTube și token PO</string>
     <string name="use_app_language_for_metadata">Folosește limba aplicației pentru metadate</string>
     <string name="layout">Aranjament</string>
     <string name="list">Listă</string>

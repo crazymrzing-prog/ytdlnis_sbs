@@ -23,12 +23,15 @@ import com.deniscerri.ytdl.MainActivity
 import com.deniscerri.ytdl.R
 import com.deniscerri.ytdl.core.RuntimeManager
 import com.deniscerri.ytdl.database.DBManager
+import com.deniscerri.ytdl.database.enums.DownloadType
 import com.deniscerri.ytdl.database.models.HistoryItem
 import com.deniscerri.ytdl.database.models.LogItem
 import com.deniscerri.ytdl.database.repository.DownloadRepository
 import com.deniscerri.ytdl.database.repository.LogRepository
 import com.deniscerri.ytdl.database.repository.ResultRepository
+import com.deniscerri.ytdl.util.LocaleUtil
 import com.deniscerri.ytdl.util.AlarmScheduler
+import com.deniscerri.ytdl.util.Extensions.fixYtdlpPath
 import com.deniscerri.ytdl.util.Extensions.getMediaDuration
 import com.deniscerri.ytdl.util.Extensions.toStringDuration
 import com.deniscerri.ytdl.util.FileUtil
@@ -112,16 +115,7 @@ class DownloadWorker(
         //val createResultItem = inputData.getBoolean("createResultItem", true)
 
         val confTmp = Configuration(context.resources.configuration)
-        val locale = if (Build.VERSION.SDK_INT < 33) {
-            sharedPreferences.getString("app_language", "")!!.ifEmpty { Locale.getDefault().language }
-        }else{
-            Locale.getDefault().language
-        }.run {
-            split("-")
-        }.run {
-            if (this.size == 1) Locale(this[0]) else Locale(this[0], this[1])
-        }
-        confTmp.setLocale(locale)
+        confTmp.setLocale(LocaleUtil.currentLocale())
         val metrics = DisplayMetrics()
         val resources = Resources(context.assets, metrics, confTmp)
 
@@ -212,13 +206,6 @@ class DownloadWorker(
                             }
                         }
 
-
-                        val writtenPath = downloadItem.format.format_note.contains("-P ")
-                        val noCache = writtenPath || (!sharedPreferences.getBoolean(
-                            "cache_downloads",
-                            true
-                        ) && File(FileUtil.formatPath(downloadItem.downloadPath)).canWrite())
-
                         val request = ytdlpUtil.buildYTDLRequest(downloadItem)
 
                         // DISABLED BECAUSE YT_DLP CONSIDERS DOWNLOAD FAILURE IF -U PART FAILS, ytdlnis #1043
@@ -250,6 +237,11 @@ class DownloadWorker(
                             "log_downloads",
                             false
                         ) && !downloadItem.incognito
+
+                        val targetDir = File(FileUtil.formatPath(downloadItem.downloadPath))
+                        val cacheDownloads = sharedPreferences.getBoolean("cache_downloads", true)
+                        val writtenPath = downloadItem.type == DownloadType.command && downloadItem.format.format_note.contains("-P ")
+                        val writeDirectly = writtenPath || (!cacheDownloads && targetDir.canWrite())
 
 
                         val commandString = ytdlpUtil.parseYTDLRequestString(request)
@@ -313,100 +305,90 @@ class DownloadWorker(
                             runBlocking {
                                 var finalPaths = mutableListOf<String>()
 
-                                if (noCache) {
-                                    WorkerEventBus.post(
-                                        WorkerProgress(
-                                            100,
-                                            "Scanning Files",
-                                            downloadItem.id,
-                                            downloadItem.logID
-                                        )
+                                //after move paths
+                                WorkerEventBus.post(
+                                    WorkerProgress(
+                                        100,
+                                        "Scanning Files",
+                                        downloadItem.id,
+                                        downloadItem.logID
                                     )
-                                    val outputSequence = it.out.split("\n")
-                                    finalPaths =
-                                        outputSequence.asSequence()
-                                            .filter { it.startsWith("'/storage") }
-                                            .map { it.removeSuffix("\n") }
-                                            .map { it.removeSurrounding("'", "'") }
-                                            .toMutableList()
+                                )
+                                val outputSequence = it.out.split("\n")
 
-                                    finalPaths.addAll(
-                                        outputSequence.asSequence()
-                                            .filter {
-                                                it.startsWith("[SplitChapters]") && it.contains(
-                                                    "Destination: "
-                                                )
-                                            }
-                                            .map { it.split("Destination: ")[1] }
-                                            .map { it.removeSuffix("\n") }
-                                            .toList()
-                                    )
+                                if (writeDirectly) {
+                                    val fromAfterMove = outputSequence.asSequence()
+                                        .filter { o -> o.startsWith("'/storage") }
+                                    val fromSplitChapters = outputSequence.asSequence()
+                                        .filter { o -> o.startsWith("[SplitChapters]") && o.contains("Destination: ") }
+                                        .map { o -> o.substringAfter("Destination: ") }
 
-                                    finalPaths.sortBy { File(it).lastModified() }
-                                    finalPaths = finalPaths.distinct().toMutableList()
-                                    FileUtil.scanMedia(finalPaths, context)
-                                } else {
-                                    //move file from internal to set download directory
-                                    WorkerEventBus.post(
-                                        WorkerProgress(
-                                            100,
-                                            "Moving file to ${FileUtil.formatPath(downloadLocation)}",
-                                            downloadItem.id,
-                                            downloadItem.logID
-                                        )
-                                    )
-                                    try {
-                                        finalPaths = withContext(Dispatchers.IO) {
-                                            FileUtil.moveFile(
-                                                tempFileDir.absoluteFile,
-                                                context,
-                                                downloadLocation,
-                                                keepCache
-                                            ) { p ->
-                                                WorkerEventBus.post(
-                                                    WorkerProgress(
-                                                        p,
-                                                        "Moving file to ${
-                                                            FileUtil.formatPath(downloadLocation)
-                                                        }",
-                                                        downloadItem.id,
-                                                        downloadItem.logID
-                                                    )
-                                                )
-                                            }
-                                        }.filter { !it.matches("\\.(description)|(txt)\$".toRegex()) }
-                                            .toMutableList()
+                                    val moveFilesRegex = Regex("""^\[MoveFiles]\s+Moving file ".*" to "(.*)"\s*$""")
+                                    val fromMoveFiles = outputSequence.asSequence()
+                                        .mapNotNull { moveFilesRegex.find(it)?.groupValues?.get(1) }
 
-                                        if (finalPaths.isNotEmpty()) {
+                                    finalPaths = (fromAfterMove + fromSplitChapters + fromMoveFiles)
+                                        .map { o -> o.trim().removeSurrounding("'").removeSurrounding("\"") }
+                                        .map { o -> o.fixYtdlpPath() }
+                                        .filter { o -> o.isNotBlank() }
+                                        .distinct()
+                                        .toMutableList()
+                                }
+
+                                //move files manually if external provider
+                                try {
+                                    val otherPaths = withContext(Dispatchers.IO) {
+                                        FileUtil.moveFile(
+                                            tempFileDir.absoluteFile,
+                                            context,
+                                            downloadLocation,
+                                            keepCache
+                                        ) { p ->
                                             WorkerEventBus.post(
                                                 WorkerProgress(
-                                                    100,
-                                                    "Moved file to ${
-                                                        FileUtil.formatPath(
-                                                            downloadLocation
-                                                        )
+                                                    p,
+                                                    "Moving file to ${
+                                                        FileUtil.formatPath(downloadLocation)
                                                     }",
                                                     downloadItem.id,
                                                     downloadItem.logID
                                                 )
                                             )
                                         }
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                        if (e.message?.isNotBlank() == true) {
-                                            handler.postDelayed({
-                                                Toast.makeText(
-                                                    context,
-                                                    e.message,
-                                                    Toast.LENGTH_SHORT
-                                                )
-                                                    .show()
-                                            }, 1000)
-                                        }
+                                    }.filter { p -> !p.matches("\\.(description)|(txt)\$".toRegex()) }
+                                        .toMutableList()
 
+                                    if (otherPaths.isNotEmpty()) {
+                                        WorkerEventBus.post(
+                                            WorkerProgress(
+                                                100,
+                                                "Moved file to ${
+                                                    FileUtil.formatPath(
+                                                        downloadLocation
+                                                    )
+                                                }",
+                                                downloadItem.id,
+                                                downloadItem.logID
+                                            )
+                                        )
                                     }
-                                }
 
+                                    finalPaths.addAll(otherPaths)
+
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    if (e.message?.isNotBlank() == true) {
+                                        handler.postDelayed({
+                                            Toast.makeText(
+                                                context,
+                                                e.message,
+                                                Toast.LENGTH_SHORT
+                                            )
+                                                .show()
+                                        }, 1000)
+                                    }
+
+                                }
 
                                 val nonMediaExtensions = mutableListOf<String>().apply {
                                     addAll(context.getStringArray(R.array.thumbnail_containers_values))
@@ -420,7 +402,11 @@ class DownloadWorker(
                                     !nonMediaExtensions.any {
                                         path.endsWith(it)
                                     }
-                                }.toMutableList()
+                                }.distinct().toMutableList()
+                                finalPaths.sortBy { p -> File(p).lastModified() }
+
+                                FileUtil.scanMedia(finalPaths, context)
+
                                 FileUtil.deleteConfigFiles(request)
 
                                 //put download in history

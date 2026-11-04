@@ -13,7 +13,15 @@
     <fragment
         android:id="@+id/folderSettingsFragment"
         android:name="com.deniscerri.ytdl.ui.more.settings.folder.FolderSettingsFragment"
-        android:label="FolderSettingsFragment" />
+        android:label="FolderSettingsFragment" >
+        <action
+            android:id="@+id/action_folderSettingsFragment_to_temporaryFilesFragment"
+            app:destination="@id/temporaryFilesFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/temporaryFilesFragment"
+        android:name="com.deniscerri.ytdl.ui.more.settings.folder.temporary.TemporaryFilesFragment"
+        android:label="TemporaryFilesFragment" />
     <fragment
         android:id="@+id/updateSettingsFragment"
         android:name="com.deniscerri.ytdl.ui.more.settings.updating.UpdateSettingsFragment"
@@ -24,7 +32,21 @@
         <action
             android:id="@+id/action_updateSettingsFragment_to_packagesFragment"
             app:destination="@id/packagesFragment" />
+        <action
+            android:id="@+id/action_updateSettingsFragment_to_ytdlpUpdateSettingsFragment"
+            app:destination="@id/ytdlpUpdateSettingsFragment" />
+        <action
+            android:id="@+id/action_updateSettingsFragment_to_appUpdateSettingsFragment"
+            app:destination="@id/appUpdateSettingsFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/ytdlpUpdateSettingsFragment"
+        android:name="com.deniscerri.ytdl.ui.more.settings.updating.ytdlp.YtdlpUpdateSettingsFragment"
+        android:label="YtdlpUpdateSettingsFragment" />
+    <fragment
+        android:id="@+id/appUpdateSettingsFragment"
+        android:name="com.deniscerri.ytdl.ui.more.settings.updating.app.AppUpdateSettingsFragment"
+        android:label="AppUpdateSettingsFragment" />
     <fragment
         android:id="@+id/downloadSettingsFragment"
         android:name="com.deniscerri.ytdl.ui.more.settings.downloading.DownloadSettingsFragment"
@@ -69,7 +91,7 @@
         android:label="YoutubePlayerClientFragment" />
     <fragment
         android:id="@+id/changeLogFragment"
-        android:name="com.deniscerri.ytdl.ui.more.settings.updating.ChangeLogFragment"
+        android:name="com.deniscerri.ytdl.ui.more.settings.updating.app.ChangeLogFragment"
         android:label="ChangeLogFragment" />
     <fragment
         android:id="@+id/generateYoutubePoTokensFragment"

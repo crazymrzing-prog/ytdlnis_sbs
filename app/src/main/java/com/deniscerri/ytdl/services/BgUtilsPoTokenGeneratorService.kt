@@ -63,6 +63,7 @@ class BgUtilsPoTokenGeneratorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val runtimeManager = RuntimeManager.getInstance()
+        runtimeManager.assertInit()
 
         if (intent?.action == "ACTION_EXIT") {
             BgUtilsPoTokenGeneratorUtil.resetState()
@@ -77,19 +78,18 @@ class BgUtilsPoTokenGeneratorService : Service() {
                 val serverFolder = BgUtilsPoTokenGeneratorUtil.getServerFolder(App.instance)
                 runtimeManager.destroyProcessById(currentRunningProcess)
 
-//                if (runtimeManager.nodeLocation.isAvailable) {
-//                    runtimeManager.executeNode(
-//                        command = "--allow-fs-read=* build/main.js",
-//                        processId = currentRunningProcess,
-//                        executeDirectory = File(serverFolder, "server")
-//                    ) { _, _, line ->
-//                        Log.e("BGUTILS_POT", line)
-//                        val notification = createNotification(line)
-//                        notificationManager.notify(notificationCode, notification)
-//                    }
-//
-//                } else
-                if (runtimeManager.denoLocation.isAvailable) {
+                val serverDir = File(serverFolder, "server")
+                if (runtimeManager.nodeLocation.isAvailable && File(serverDir, "build/main.js").exists()) {
+                    runtimeManager.executeNode(
+                        command = "build/main.js",
+                        processId = currentRunningProcess,
+                        executeDirectory = serverDir
+                    ) { _, _, line ->
+                        Log.e("BGUTILS_POT", line)
+                        val notification = createNotification(line)
+                        notificationManager.notify(notificationCode, notification)
+                    }
+                } else if (runtimeManager.denoLocation.isAvailable) {
                     runtimeManager.executeDeno(
                         command = "run -A src/main.ts",
                         processId = currentRunningProcess,
@@ -102,8 +102,16 @@ class BgUtilsPoTokenGeneratorService : Service() {
                 }
 
 
-            }.onFailure { err ->
-                Log.e("BGUTILS_POT", err.message ?: "")
+            }.also { result ->
+                val err = result.exceptionOrNull()
+                // killed on purpose (restart or exit), whoever killed it handles the service state
+                if (err is RuntimeManager.CanceledException) return@also
+                if (err != null) Log.e("BGUTILS_POT", err.message ?: "")
+
+                // the server process died on its own (crash, killed by the system) or finished.
+                // forget the active job count so the next acquireServer starts it again instead of assuming it is running
+                BgUtilsPoTokenGeneratorUtil.resetState()
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
         }

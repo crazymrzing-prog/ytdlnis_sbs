@@ -68,7 +68,6 @@
     <string name="template">قالب</string>
     <string name="logs">السجلات</string>
     <string name="date_added">تاريخ الإضافة</string>
-    <string name="update_ytdl_nightly">إصدارات yt-dlp التجريبية</string>
     <string name="adjust_audio">تخصيص الصوت</string>
     <string name="file_name_template">قالب العنوان</string>
     <string name="language">اللغة</string>
@@ -139,7 +138,7 @@
     <string name="add_chapter">إضافة فصول</string>
     <string name="show_download_card">إظهار بطاقة التنزيل</string>
     <string name="download_card_summary">امكانية تعديل إعدادات العنصر قبل التنزيل، يؤدي تعطيل هذا الخيار الى بدء التنزيل على الفور</string>
-    <string name="Open_File">فتح الملف</string>
+    <string name="open_file">فتح الملف</string>
     <string name="delete_files_too">الحذف من وحدة التخزين أيضًا</string>
     <string name="delete_file_too">الحذف من وحدة التخزين أيضًا</string>
     <string name="you_are_going_to_delete_multiple_items">سيتم إزالة العناصر المحددة/المدرجة</string>
@@ -314,14 +313,12 @@
     <string name="security">سياسة الخصوصية والأمان</string>
     <string name="length">الطول</string>
     <string name="export_file">تصدير الملف</string>
-    <string name="update_ytdl_master">الإصدارات الرئيسة لـ yt-dlp</string>
     <string name="errored_downloads">التنزيلات المتعطلة</string>
     <string name="errored_download_notification_channel_description">إشعار بتعطل التنزيلات</string>
     <string name="buffer_size_summary">حجم الذاكرة المؤقتة للتنزيل، على سبيل المثال، 1024 أو 16 كيلوبايت (الافتراضي هو 1024)</string>
     <string name="ytdl_source">مصدر yt-dlp</string>
     <string name="buffer_size">حجم الذاكرة المؤقتة</string>
     <string name="preferred_audio_language">لغة الصوت المفضلة</string>
-    <string name="update_ytdl_stable">الإصدارات المستقرة لـ yt-dlp</string>
     <string name="changelog">سجل التغييرات</string>
     <string name="app">التطبيق</string>
     <string name="source">المصادر</string>
@@ -452,7 +449,7 @@
     <string name="grid">شبكة</string>
     <string name="player_client">عميل المشغل</string>
     <string name="list">قائمة</string>
-    <string name="player_client_summary"><![CDATA[عملاء مشغّل اليوتيوب و رمز PO]]></string>
+    <string name="player_client_summary">عملاء مشغّل اليوتيوب و رمز PO</string>
     <string name="cache_directory">مجلد الذاكرة المؤقتة</string>
     <string name="cache_directory_warning">قد يؤدي تغيير مجلد الذاكرة المؤقتة إلى حدوث مشكلات غير متوقعة. إذا لم يتمكن التطبيق من الكتابة إلى المسار المحدد، فسوف يلجأ إلى الدليل الافتراضي للذاكرة المؤقتة الداخلية</string>
     <string name="use_only_po_token">استخدم رمز PO فقط (تجاهل المشغل العميل)</string>
@@ -626,4 +623,8 @@
     <string name="notset">غير محدد</string>
     <string name="packages_description">الحزم هي تطبيقات مساعدة يستخدمها YTDLnis لدعم أوامر yt-dlp. تأتي بعض هذه الحزم مدمجة بالفعل مع التطبيق، ولكن يمكنك تثبيت إصدارات أحدث يتم إصدارها دون الحاجة إلى تحديث التطبيق نفسه؛ حيث تحل ملفات APK المثبتة هذه محل الإصدار المدمج الذي يستخدمه التطبيق.</string>
     <string name="bgutils_pot_generation_script_info">لاستخدام مزود BgUtils POT، يحتاج التطبيق إلى تحميل المستودع Brainicism/bgutil-ytdlp-pot-provider من GitHub وبدء عملية التثبيت. قد تستغرق هذه العملية بعض الوقت؛ هل تود المتابعة الآن؟</string>
+    <string name="search_results">نتائج البحث</string>
+    <string name="clear_info_json">مسح ملفات infojson</string>
+    <string name="internal_plugin_ffmpeg_preset">إعداد FFmpeg مسبق للإضافة الداخلية</string>
+    <string name="internal_plugin_ffmpeg_preset_summary">الإعداد المسبق الذي يستخدمه FFmpeg للإضافات الداخلية مثل دمج الترجمة داخل الفيديو وغيرها. تعديل هذا الخيار يؤثر على حجم الملف النهائي!</string>
 </resources>

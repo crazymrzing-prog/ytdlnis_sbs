@@ -19,6 +19,7 @@ import com.deniscerri.ytdl.R
 import com.deniscerri.ytdl.database.enums.DownloadType
 import com.deniscerri.ytdl.database.models.DownloadItemSimple
 import com.deniscerri.ytdl.database.repository.DownloadRepository
+import com.deniscerri.ytdl.util.DragSelectTouchListener
 import com.deniscerri.ytdl.util.Extensions.loadThumbnail
 import com.deniscerri.ytdl.util.Extensions.popup
 import com.deniscerri.ytdl.util.FileUtil
@@ -27,7 +28,7 @@ import com.google.android.material.card.MaterialCardView
 
 class GenericDownloadAdapter(onItemClickListener: OnItemClickListener, activity: Activity) : PagingDataAdapter<DownloadItemSimple, GenericDownloadAdapter.ViewHolder>(
     DIFF_CALLBACK
-) {
+), DragSelectTouchListener.Selectable {
     private val onItemClickListener: OnItemClickListener
     private val activity: Activity
     val checkedItems: MutableSet<Long>
@@ -85,15 +86,24 @@ class GenericDownloadAdapter(onItemClickListener: OnItemClickListener, activity:
         //DOWNLOAD TYPE -----------------------------
         val type = card.findViewById<TextView>(R.id.download_type)
         when(item.type){
-            DownloadType.audio -> type.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_music_formatcard, 0,0,0
-            )
-            DownloadType.video -> type.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_video_formatcard, 0,0,0
-            )
-            else -> type.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_terminal_formatcard, 0,0,0
-            )
+            DownloadType.audio -> {
+                type.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_music_formatcard, 0,0,0
+                )
+                type.text = activity.getString(R.string.audio)
+            }
+            DownloadType.video -> {
+                type.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_video_formatcard, 0,0,0
+                )
+                type.text = activity.getString(R.string.video)
+            }
+            else -> {
+                type.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_terminal_formatcard, 0,0,0
+                )
+                type.text = activity.getString(R.string.command)
+            }
         }
 
         val incognitoLabel = card.findViewById<MaterialButton>(R.id.incognitoLabel)
@@ -138,7 +148,7 @@ class GenericDownloadAdapter(onItemClickListener: OnItemClickListener, activity:
                 actionButton.setIconResource(R.drawable.ic_downloads)
                 actionButton.contentDescription = activity.getString(R.string.download)
             }
-            DownloadRepository.Status.Queued.toString() -> {
+            DownloadRepository.Status.Queued.toString(), DownloadRepository.Status.QueuedPaused.toString() -> {
                 actionButton.setIconResource(R.drawable.ic_baseline_delete_outline_24)
                 actionButton.contentDescription = activity.getString(R.string.Remove)
             }
@@ -229,6 +239,20 @@ class GenericDownloadAdapter(onItemClickListener: OnItemClickListener, activity:
 
         card.isChecked = !card.isChecked
         onItemClickListener.onCardSelect(card.isChecked, position)
+    }
+
+    override fun isItemSelected(position: Int): Boolean {
+        val item = (if (position in 0 until itemCount) peek(position) else null) ?: return false
+        return checkedItems.contains(item.id) != inverted
+    }
+
+    override fun setItemSelected(position: Int, selected: Boolean) {
+        val item = (if (position in 0 until itemCount) peek(position) else null) ?: return
+        if (isItemSelected(position) == selected) return
+        if (selected != inverted) checkedItems.add(item.id) else checkedItems.remove(item.id)
+        // the payload skips the change animation so cards don't flash while dragging
+        notifyItemChanged(position, "selection")
+        onItemClickListener.onCardSelect(selected, position)
     }
 
     interface OnItemClickListener {

@@ -3,12 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory android:title="@string/appearance">
-        <ListPreference
-            android:entries="@array/language_entries"
-            android:entryValues="@array/language_values"
-            android:defaultValue=""
+        <Preference
             android:icon="@drawable/baseline_translate_24"
             app:key="app_language"
+            app:persistent="false"
             app:summary=""
             app:title="@string/language" />
 
@@ -127,6 +125,15 @@
 
     <PreferenceCategory android:title="@string/misc">
         <ListPreference
+            android:defaultValue="share"
+            android:entries="@array/history_quick_action_entries"
+            android:entryValues="@array/history_quick_action_values"
+            app:icon="@drawable/ic_edit"
+            app:useSimpleSummaryProvider="true"
+            app:key="history_quick_action"
+            app:title="@string/history_quick_action" />
+
+        <ListPreference
             android:defaultValue=""
             android:entries="@array/countries"
             android:entryValues="@array/countries_values"
@@ -207,12 +214,6 @@
             android:key="show_terminal"
             app:title="@string/show_terminal" />
 
-        <SwitchPreferenceCompat
-            android:widgetLayout="@layout/preferece_material_switch"
-            app:defaultValue="false"
-            android:icon="@drawable/baseline_share2_24"
-            android:key="show_quick_download_share"
-            app:title="@string/show_quick_download_share_menu" />
 
         <SwitchPreferenceCompat
             android:widgetLayout="@layout/preferece_material_switch"
@@ -220,6 +221,13 @@
             android:icon="@drawable/baseline_numbers_24"
             android:key="show_count_downloads"
             app:title="@string/show_download_count" />
+
+        <SwitchPreferenceCompat
+            android:widgetLayout="@layout/preferece_material_switch"
+            app:defaultValue="true"
+            android:icon="@drawable/baseline_numbers_24"
+            android:key="write_ytdlp_terminal"
+            app:title="@string/write_ytdlp_terminal" />
 
 
         <Preference

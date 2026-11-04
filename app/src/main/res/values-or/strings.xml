@@ -64,7 +64,7 @@
     <string name="video_quality">ଭିଡିଓ ଗୁଣବତ୍ତା</string>
     <string name="add_chapter">ଅଧ୍ୟାୟଗୁଡିକ ଯୋଡନ୍ତୁ</string>
     <string name="show_download_card">ଡାଉନଲୋଡ୍ କାର୍ଡ ଦେଖାନ୍ତୁ</string>
-    <string name="Open_File">ଫାଇଲ୍ ଖୋଲନ୍ତୁ</string>
+    <string name="open_file">ଫାଇଲ୍ ଖୋଲନ୍ତୁ</string>
     <string name="download_card_summary">ଡାଉନଲୋଡ୍ କରିବା ପୂର୍ବରୁ ସେହି ଆଇଟମ୍ ପାଇଁ ସେଟିଂସମୂହ ପରିବର୍ତ୍ତନ କରନ୍ତୁ । ଏହି ବିକଳ୍ପକୁ ଅକ୍ଷମ କରିବା ତୁରନ୍ତ ଡାଉନଲୋଡ୍ ଆରମ୍ଭ କରେ</string>
     <string name="you_are_going_to_delete_multiple_items">ଏକାଧିକ ଆଇଟମ୍ ଡିଲିଟ୍ କରୁଛି</string>
     <string name="delete_file_too">ଡିଭାଇସ୍ ରୁ ଫାଇଲ୍ ଡିଲିଟ୍ କରନ୍ତୁ</string>
@@ -115,7 +115,6 @@
     <string name="sponsorblock_promos">ସେଲ୍ଫ୍ ପ୍ରମୋସ୍</string>
     <string name="sponsorblock_previews">ପୂର୍ବାବଲୋକନ</string>
     <string name="sponsorblock_reminders">ସଦସ୍ୟତା ସ୍ମାରକପତ୍ର</string>
-    <string name="update_ytdl_nightly">Yt-dlp ର ରାତ୍ରି ସଂସ୍କରଣ</string>
     <string name="adjust_audio">ଅଡିଓ ଆଡଜଷ୍ଟ କରନ୍ତୁ</string>
     <string name="file_name_template">ଫାଇଲନାମ ଟେମ୍ପଲେଟ୍</string>
 </resources>

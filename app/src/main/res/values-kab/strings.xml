@@ -50,7 +50,7 @@
     <string name="source_code">Tangalt taɣbalut</string>
     <string name="no_results">Ulac igmaḍ</string>
     <string name="warning">Asmigel</string>
-    <string name="Open_File">Ldi afaylu</string>
+    <string name="open_file">Ldi afaylu</string>
     <string name="exit_app">Ffeɣ seg usnas-a</string>
     <string name="errored">Tuccḍa</string>
     <string name="please_wait">Rǧu ma ulac aɣilif</string>
@@ -110,7 +110,6 @@
     <string name="delete_all_sources">Kkes akk tiɣbula</string>
     <string name="wait_for_video">Rǧu tavidyut</string>
     <string name="generate_potokens">Sarew-d tiddas PO</string>
-    <string name="update_ytdl_nightly">Lqem nightly n yt-dlp</string>
     <string name="command">Anezḍay</string>
     <string name="minute">Tasdat</string>
     <string name="second">Tasint</string>

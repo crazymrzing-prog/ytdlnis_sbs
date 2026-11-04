@@ -12,6 +12,7 @@
     <string name="music_directory">Audio folder</string>
     <string name="video_directory">Video folder</string>
     <string name="updating">Updating</string>
+    <string name="open_file">Open file</string>
     <string name="ytdl_update_hint">Useful tip while downloading updates</string>
     <string name="update_ytdl">Update yt-dlp to the new version</string>
     <string name="about">About</string>
@@ -40,6 +41,7 @@
     <string name="downloading_update">Downloading new version</string>
     <string name="audio">Audio</string>
     <string name="video">Video</string>
+    <string name="optional">Optional</string>
     <string name="concurrent_fragments_summary">Number of fragments of a DASH/HLS native video to download concurrently</string>
     <string name="concurrent_fragments">Concurrent fragments</string>
     <string name="downloading">Downloading</string>
@@ -71,7 +73,7 @@
     <string name="api_key_summary">Video recommendations from YouTube API</string>
     <string name="update_app_summary">Announce new versions of the app when it is opened. The data is extracted from the official GitHub Repository</string>
     <string name="downloads">Downloads</string>
-    <string name="search_results">Search Results</string>
+    <string name="search_results">Search results</string>
     <string name="remove_deleted">Remove deleted</string>
     <string name="remove_duplicates">Remove duplicates</string>
     <string name="sort_by">Sorting</string>
@@ -88,7 +90,6 @@
     <string name="add_chapter">Add chapters</string>
     <string name="show_download_card">Show download card</string>
     <string name="download_card_summary">Modify settings for that item before downloading. Disabling this option starts the download immediately</string>
-    <string name="Open_File">Open file</string>
     <string name="you_are_going_to_delete_multiple_items">Deleting multiple items</string>
     <string name="delete_file_too">Delete the file from the device</string>
     <string name="delete_files_too">Delete the files from the device</string>
@@ -117,7 +118,6 @@
     <string name="template">Template</string>
     <string name="logs">Logs</string>
     <string name="date_added">Date added</string>
-    <string name="update_ytdl_nightly">Nightly version of yt-dlp</string>
     <string name="adjust_audio">Adjust audio</string>
     <string name="file_name_template">Filename template</string>
     <string name="language">Language</string>
@@ -160,12 +160,20 @@
     <string name="access_all_directories_summary">Let the app download on directories that are restricted by default</string>
     <string name="redownload">Redownload</string>
     <string name="in_queue">In queue</string>
+    <plurals name="queue_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="reorder_queue">Reorder queue</string>
     <string name="clear_cancelled">Clear cancelled</string>
     <string name="clear_errored">Clear errored</string>
     <string name="split_by_chapters">Split by chapters</string>
     <string name="items_imported">Items imported</string>
     <string name="help_translate">Help translate</string>
     <string name="help_translate_summary">Translate this app on your language using Weblate</string>
+    <string name="translators">Translators</string>
+    <string name="translators_summary">People who helped translate this app on Weblate</string>
+    <string name="translators_unavailable">The translators list is not available in this build. You can still see everyone who contributed on Weblate.</string>
     <string name="restart">Restart</string>
     <string name="download_rescheduled_to">Download rescheduled to:</string>
     <string name="file_size">File size</string>
@@ -198,12 +206,14 @@
     <string name="cookies">Cookies</string>
     <string name="new_cookie">New cookie</string>
     <string name="get_cookies">Get cookies</string>
+    <string name="no_cookies_found">No cookies were found for this site. Finish signing in, then try again</string>
     <string name="delete_all_cookies">Delete all cookies</string>
     <string name="confirm_delete_cookies_desc">Delete all the cookies, permanently</string>
     <string name="download_over_metered_networks">Download over metered networks</string>
     <string name="download_over_metered_networks_summary">Downloads using any network type. Otherwise waits for an unmetered network</string>
     <string name="metered_network_download_start_info">Download will start once you are connected to an unmetered network</string>
     <string name="invert_selected">Invert selected</string>
+    <string name="toggle_all">Toggle all</string>
     <string name="save_subs">Save subtitles</string>
     <string name="save_subs_desc">Write subtitle file</string>
     <string name="subtitle_languages">Subtitle languages</string>
@@ -285,6 +295,7 @@
     <string name="retries">Retries</string>
     <string name="fragment_retries">Fragment retries</string>
     <string name="format_order">Format order</string>
+    <string name="merge_cuts">Merge cuts into one file</string>
     <string name="force_keyframes">Force keyframes at cuts</string>
     <string name="force_keyframes_summary">Slower process, but more accurate cuts</string>
     <string name="use_extra_commands">Add extra commands</string>
@@ -302,6 +313,8 @@
     <string name="use_cookies">Use cookies</string>
     <string name="embed_metadata">Embed metadata</string>
     <string name="embed_metadata_summary">Parse and embed metadata to the file</string>
+    <string name="all_artists_in_album_artist">Save all artists in Album Artist</string>
+    <string name="all_artists_in_album_artist_summary">Use all artists for the Album Artist tag instead of only the first one</string>
     <string name="update_formats_background">Update formats in background</string>
     <string name="auto_update_ytdlp">Auto-update yt-dlp</string>
     <string name="use_sponsorblock">Use SponsorBlock</string>
@@ -328,8 +341,6 @@
     <string name="modify_download_card">Modify download card</string>
     <string name="export_file">Export file</string>
     <string name="ytdl_source">yt-dlp source</string>
-    <string name="update_ytdl_master">Master version of yt-dlp</string>
-    <string name="update_ytdl_stable">Stable version of yt-dlp</string>
     <string name="buffer_size">Buffer size</string>
     <string name="buffer_size_summary">Size of download buffer, e.g. 1024 or 16K (default is 1024)</string>
     <string name="preferred_audio_language">Preferred audio language</string>
@@ -337,6 +348,7 @@
     <string name="source">Source</string>
     <string name="app">App</string>
     <string name="cut_unavailable_please_update_item">You need to update the item data in order to be able to use cut feature</string>
+    <string name="crop_unavailable_please_update_item">You need to update the item data in order to be able to use crop feature</string>
     <string name="changed_path_for_everyone_to">Changed every item\'s download path to:</string>
     <string name="dismiss">Dismiss</string>
     <string name="all">All</string>
@@ -461,7 +473,7 @@
     <string name="prefer_container_over_codec_audio">Prefer container over codec for audio downloads</string>
     <string name="prefer_container_over_codec_audio_summary">With this enabled, the preferred audio codec preference will be ignored and only container will change</string>
     <string name="player_client">Player client</string>
-    <string name="player_client_summary"><![CDATA[YouTube Player Clients & PO Token]]></string>
+    <string name="player_client_summary">YouTube Player Clients &amp; PO Token</string>
     <string name="use_app_language_for_metadata">Use app language for metadata</string>
     <string name="layout">Layout</string>
     <string name="list">List</string>
@@ -489,20 +501,21 @@
     <string name="reverse">Reverse</string>
     <string name="no_keep_subs">Delete subtitle files after embedding</string>
     <string name="no_keep_subs_summary">When using both Embed Subtitles and Write Subtitles, don\'t keep the subtitle files after embedding</string>
-    <string name="video_compatible">Compatible Video</string>
+    <string name="video_compatible">Compatible video</string>
     <string name="video_compatible_summary">Recodes the video making it compatible with other apps</string>
     <string name="no_free_space_warning">There is no free space for this configuration.</string>
-    <string name="preferred_format_size">Preferred Format Size</string>
+    <string name="preferred_format_size">Preferred format size</string>
+    <string name="preferred_format_size_audio">Preferred audio format size</string>
     <string name="smallest">Smallest</string>
     <string name="largest">Largest</string>
-    <string name="prefer_drc_audio">Prefer DRC Audio</string>
+    <string name="prefer_drc_audio">Prefer DRC audio</string>
     <string name="potoken_gvs">PO Token (GVS)</string>
     <string name="potoken_player">PO Token (Player)</string>
     <string name="potoken_subs">PO Token (Subs)</string>
     <string name="visitor_data">Visitor Data</string>
     <string name="get_data_sync_id">Get Data Sync ID</string>
     <string name="desktop">Desktop</string>
-    <string name="url_regex">URL Regex</string>
+    <string name="url_regex">URL regex</string>
     <string name="disable_flat_playlist">Disable flat playlist</string>
     <string name="disable_flat_playlist_summary">Don\'t use --flat-playlist. Slower data fetching, but more data rich</string>
     <string name="chapters">Chapters</string>
@@ -514,10 +527,10 @@
     <string name="potoken_guide">Auth\n-----------------------\n1. Click \'Auth\' to open the sign in page in WebView.\n2. Sign in to your Google Account.\n3. Play any video that supports auto-translated subtitles.\n4. Turn on auto-translated subtitles and see if it works.\n\t4.1 If auto-translated subtitles don\'t work, switch to another video that supports auto-translated subtitles and try step 4 again.\n5. Click OK.\n\nNo Auth\n-----------------------\n1. Click \'No Auth\'.\n2. Write any youtube video url\n3. Wait for the video to load and play the video for at least 3 seconds.\n4. Click OK.</string>
     <string name="no_auth">No Auth</string>
     <string name="auth">Auth</string>
-    <string name="app_icon">App Icon</string>
+    <string name="app_icon">App icon</string>
     <string name="show_quick_download_share_menu">Show option to download immediately in the share menu</string>
     <string name="quick_download_title">Don\'t fetch data</string>
-    <string name="sponsorblock_hook">Hook/Greetings</string>
+    <string name="sponsorblock_hook">Hook/greetings</string>
     <string name="packages">Packages</string>
     <string name="not_installed">Not installed</string>
     <string name="bundled">Bundled</string>
@@ -530,9 +543,9 @@
     <string name="install_downloaded_file">Install the downloaded file</string>
     <string name="website">Website</string>
     <string name="playlist">Playlist</string>
-    <string name="media_type">Media Type</string>
-    <string name="free_ratio">Free Ratio</string>
-    <string name="aspect_ratio">Aspect Ratio</string>
+    <string name="media_type">Media type</string>
+    <string name="free_ratio">Free ratio</string>
+    <string name="aspect_ratio">Aspect ratio</string>
     <string name="dimensions">Dimensions</string>
     <string name="x_offset">X Offset</string>
     <string name="y_offset">Y Offset</string>
@@ -543,6 +556,11 @@
     <string name="write_atleast_one_potoken">You need to write at least one PO Token</string>
     <string name="version_ready_to_download">Version %s is ready to download</string>
     <string name="package_version_ready_to_download">Package %1$s with version %2$s is ready to download</string>
+    <plurals name="updates_available_summary">
+        <item quantity="one">%d update available</item>
+        <item quantity="other">%d updates available</item>
+    </plurals>
+    <string name="update_install">Install</string>
     <string name="tap_to_see_changes_and_install">Tap to see changes and install</string>
     <string name="view">View</string>
     <string name="next_run">Next: %1$s</string>
@@ -570,15 +588,18 @@
     <string name="max_delay">Max delay (seconds)</string>
     <string name="no_delay">No delay set</string>
     <string name="waiting_download_delay">Waiting download delay (%s seconds)…</string>
-    <plurals name="every_minutes"><item quantity="one">Every minute</item><item quantity="other">Every %d minutes</item></plurals>
+    <plurals name="every_minutes">
+        <item quantity="one">Every minute</item>
+        <item quantity="other">Every %d minutes</item>
+    </plurals>
     <string name="bgutils_info">A proof-of-origin token (POT) provider for yt-dlp.\nWith it enabled, YTDLnis hosts the HTTP server that generates the POT and installs the related plugin that yt-dlp uses.</string>
     <string name="bgutils_pot_generation_script">Generation script</string>
-    <string name="bgutils_pot_generation_server">HTTP Server</string>
+    <string name="bgutils_pot_generation_server">HTTP server</string>
     <string name="bgutils_pot_generation_script_summary">Every yt-dlp call incurs the overhead of spawning a new js runtime process to run the script. This method is not recommended for high concurrency usage.</string>
     <string name="bgutils_pot_server_summary">This is a JavaScript HTTP server, on port 4416. If down, it automatically starts the server when download queue starts executing, or observe sources is scheduled. To shut it down, you have to do it manually from notifications!</string>
     <string name="please_install_package">Please install package %s</string>
     <string name="please_install_package_or_package">Please install %1$s package or %2$s package</string>
-    <string name="installation_method">Installation method</string>
+    <string name="installation_method">APK Installation method</string>
     <string name="system_install_failed">System install failed. Please choose another installation method in the settings!</string>
     <string name="choose_installer_app">Choose an installer app</string>
     <string name="notset">Not set</string>
@@ -590,10 +611,110 @@
     <string name="check_clipboard_home_summary">Automatically detect URLs in clipboard in the home screen</string>
     <string name="check_clipboard_home">Check clipboard in the home screen</string>
     <string name="clear_info_json">Clear infojsons</string>
-    <string name="internal_plugin_ffmpeg_preset">Internal Plugin FFmpeg Preset</string>
+    <string name="internal_plugin_ffmpeg_preset">Internal plugin FFmpeg preset</string>
     <string name="internal_plugin_ffmpeg_preset_summary">Preset FFmpeg uses for internal plugins like burn subs etc. Adjusting this preference affects the final file size!</string>
-    <plurals name="every_hours"><item quantity="one">Every hour</item><item quantity="other">Every %d hours</item></plurals>
-    <plurals name="every_days"><item quantity="one">Every day</item><item quantity="other">Every %d days</item></plurals>
-    <plurals name="every_weeks"><item quantity="one">Every week</item><item quantity="other">Every %d weeks</item></plurals>
-    <plurals name="every_months"><item quantity="one">Every month</item><item quantity="other">Every %d months</item></plurals>
+    <plurals name="every_hours">
+        <item quantity="one">Every hour</item>
+        <item quantity="other">Every %d hours</item>
+    </plurals>
+    <plurals name="every_days">
+        <item quantity="one">Every day</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
+    <plurals name="every_weeks">
+        <item quantity="one">Every week</item>
+        <item quantity="other">Every %d weeks</item>
+    </plurals>
+    <plurals name="every_months">
+        <item quantity="one">Every month</item>
+        <item quantity="other">Every %d months</item>
+    </plurals>
+    <string name="history_quick_action">Quick action button</string>
+    <string name="history_quick_action_summary">Action to perform when clicking the quick action button on the history card</string>
+    <string name="duration">Duration</string>
+    <string name="update_available">Update available</string>
+    <string name="update_check_failed">Couldn\'t check for updates</string>
+    <string name="checking_for_updates">Checking for updates…</string>
+    <string name="version_installed">%1$s installed</string>
+    <string name="check_now">Check now</string>
+    <string name="version_update_available">%1$s → %2$s</string>
+    <string name="update_checked_ago">Checked %1$s</string>
+    <string name="update_checked_just_now">Checked just now</string>
+    <string name="update_not_checked_yet">Not checked yet</string>
+    <string name="update_channel">Update channel</string>
+    <string name="custom_channels">Custom fork</string>
+    <string name="custom_channels_summary">Update from your own yt-dlp release repositories</string>
+    <string name="channel_stable">Stable</string>
+    <string name="channel_nightly">Nightly</string>
+    <string name="channel_master">Master</string>
+    <string name="channel_beta">Beta</string>
+    <string name="ytdlp" translatable="false">yt-dlp</string>
+    <string name="temporary_files">Temporary files</string>
+    <string name="temporary_files_description">Working files held by the app. Temporary configurations and other yt-dlp related data.</string>
+    <string name="unfinished_downloads">Unfinished downloads</string>
+    <string name="unfinished_downloads_summary">Partial files of stopped or failed downloads, kept so they can be resumed</string>
+    <string name="info_jsons">Info-JSONs</string>
+    <string name="info_jsons_summary">Saved video metadata so yt-dlp doesn\'t have to fetch it again</string>
+    <string name="ytdlp_cache">yt-dlp cache</string>
+    <string name="ytdlp_cache_summary">Data yt-dlp reuses between runs, like YouTube player signatures</string>
+    <string name="temporary_configurations">Temporary configurations</string>
+    <string name="temporary_configurations_summary">Command configs, URL lists and other short-lived files</string>
+    <string name="downloaded_apks">Downloaded APKs</string>
+    <string name="downloaded_apks_summary">APKs downloaded for app and package updates</string>
+    <string name="clear_everything">Clear everything</string>
+    <string name="clear_temporary_files_confirm">Delete %1$s of files? This can\'t be undone.</string>
+    <string name="failed_to_fetch">Failed to fetch</string>
+    <string name="failed_to_fetch_summary">These items couldn\'t be fetched. Retry them or download them without the fetched data.</string>
+    <plurals name="items_failed_to_fetch">
+        <item quantity="one">%d item failed to fetch</item>
+        <item quantity="other">%d items failed to fetch</item>
+    </plurals>
+    <string name="retry">Retry</string>
+    <string name="retry_all">Retry all</string>
+    <string name="download_anyway">Download anyway</string>
+    <string name="write_ytdlp_terminal">Auto write yt-dlp in terminal</string>
+    <string name="clear">Clear</string>
+    <string name="welcome_title">Welcome to YTDLnis</string>
+    <string name="welcome_subtitle">Download video and audio using yt-dlp. Let\'s get a few things set up first.</string>
+    <string name="welcome_get_started">Get started</string>
+    <string name="welcome_restore_backup">Restore from backup</string>
+    <string name="welcome_restore_failed">Could not restore this backup</string>
+    <string name="welcome_restoring">Restoring backup…</string>
+    <string name="welcome_guide_title">Read the guide</string>
+    <string name="welcome_guide_summary">The guide covers everything about the app, downloading, command templates and fixing common problems. You can open it any time from the website.</string>
+    <string name="welcome_open_guide">Open guide</string>
+    <string name="welcome_permissions_title">Permissions</string>
+    <string name="welcome_permissions_summary">YTDLnis works best with these. You can change them later in the settings.</string>
+    <string name="welcome_perm_storage">Storage access</string>
+    <string name="welcome_perm_storage_summary">Needed to save your downloads to the device.</string>
+    <string name="welcome_perm_notifications">Notifications</string>
+    <string name="welcome_perm_notifications_summary">Show download progress and finished downloads.</string>
+    <string name="welcome_perm_battery">Unrestricted battery use</string>
+    <string name="welcome_perm_battery_summary">Keeps long downloads from being stopped in the background.</string>
+    <string name="welcome_perm_alarms">Alarms and reminders</string>
+    <string name="welcome_perm_alarms_summary">Lets scheduled downloads start at the exact time.</string>
+    <string name="welcome_allow">Allow</string>
+    <string name="welcome_allowed">Allowed</string>
+    <string name="welcome_required">Required</string>
+    <string name="welcome_perm_folders_header">Restored folders</string>
+    <string name="welcome_perm_folders_summary">Your backup uses these folders, but the app lost access to them. Allow each one again, or pick a different folder to use instead.</string>
+    <string name="welcome_updates_title">Updates</string>
+    <string name="welcome_updates_summary">Choose how YTDLnis stays up to date.</string>
+    <string name="welcome_next">Next</string>
+    <string name="welcome_finish">Finish</string>
+    <string name="lyrics">Lyrics</string>
+    <string name="embed_lyrics">Embed lyrics</string>
+    <string name="save_lrc_file">Save .lrc file</string>
+    <string name="lyrics_offset">Offset</string>
+    <string name="lyrics_not_found">No lyrics found</string>
+    <string name="lyrics_unsynced">Lyrics are not synced, no timing to adjust</string>
+    <string name="lyrics_source">Lyrics from lrclib.net</string>
+    <string name="lyrics_no_preview">Preview unavailable, lyrics will still be added on download</string>
+    <string name="lyrics_synced">Synced</string>
+    <string name="lyrics_plain">Plain text</string>
+    <string name="embed_lyrics_summary">Fetch lyrics from lrclib.net and embed them in audio downloads</string>
+    <string name="save_lrc_file_summary">Save synced lyrics as a .lrc file next to audio downloads</string>
+    <string name="crop_unsupported">Cropping is not available for this item</string>
+    <string name="press_cancel">Press here to cancel</string>
+    <string name="fetching_data">Fetching data...</string>
 </resources>

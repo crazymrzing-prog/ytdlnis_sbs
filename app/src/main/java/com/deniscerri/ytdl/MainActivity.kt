@@ -12,24 +12,14 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
-import android.view.inputmethod.InputMethodManager
 import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.children
 import androidx.core.view.forEach
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -42,8 +32,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
-import com.afollestad.materialdialogs.utils.MDUtil.getStringArray
-import com.afollestad.materialdialogs.utils.MDUtil.textChanged
 import com.anggrayudi.storage.file.getAbsolutePath
 import com.deniscerri.ytdl.core.RuntimeManager
 import com.deniscerri.ytdl.database.DBManager
@@ -55,31 +43,25 @@ import com.deniscerri.ytdl.database.viewmodel.DownloadViewModel
 import com.deniscerri.ytdl.database.viewmodel.ResultViewModel
 import com.deniscerri.ytdl.database.viewmodel.SettingsViewModel
 import com.deniscerri.ytdl.ui.BaseActivity
-import com.deniscerri.ytdl.ui.HomeFragment
+import com.deniscerri.ytdl.ui.home.HomeFragment
 import com.deniscerri.ytdl.ui.downloads.DownloadQueueMainFragment
 import com.deniscerri.ytdl.ui.downloads.HistoryFragment
 import com.deniscerri.ytdl.ui.more.settings.SettingsActivity
+import com.deniscerri.ytdl.ui.welcome.WelcomeActivity
 import com.deniscerri.ytdl.util.ApkInstallUtil
 import com.deniscerri.ytdl.util.BgUtilsPoTokenGeneratorUtil
 import com.deniscerri.ytdl.util.CrashListener
 import com.deniscerri.ytdl.util.NavbarUtil
 import com.deniscerri.ytdl.util.NavbarUtil.applyNavBarStyle
 import com.deniscerri.ytdl.util.ThemeUtil
-import com.deniscerri.ytdl.util.UiUtil
 import com.deniscerri.ytdl.util.UpdateUtil
-import com.deniscerri.ytdl.work.background.UpdateCheckWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.elevation.SurfaceColors
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.navigation.NavigationBarView
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.navigationrail.NavigationRailView
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -111,10 +93,17 @@ class MainActivity : BaseActivity() {
     private lateinit var navController : NavController
     private var loadingRuntimeDialog: androidx.appcompat.app.AlertDialog? = null
 
-    private lateinit var installLauncher: ActivityResultLauncher<Intent>
+    lateinit var installLauncher: ActivityResultLauncher<Intent>
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // first run: the welcome flow asks for permissions and update preferences, then reopens this
+        if (WelcomeActivity.isNeeded(PreferenceManager.getDefaultSharedPreferences(this))) {
+            startActivity(Intent(this, WelcomeActivity::class.java).putExtra(WelcomeActivity.EXTRA_NEXT_INTENT, intent))
+            finish()
+            return
+        }
         CrashListener(this).registerExceptionHandler()
         ThemeUtil.updateTheme(this)
         window.navigationBarColor = SurfaceColors.SURFACE_2.getColor(this)
@@ -134,7 +123,8 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        askPermissions()
+        // new users already went through the permissions page, so only the required ones are re-checked
+        askPermissions(includeOptional = !preferences.getBoolean(WelcomeActivity.PREF_COMPLETED, false))
 
         navHostFragment = supportFragmentManager.findFragmentById(R.id.frame_layout) as NavHostFragment
         navController = navHostFragment.findNavController()
@@ -294,10 +284,22 @@ class MainActivity : BaseActivity() {
 
         cookieViewModel.updateCookiesFile()
         installLauncher = ApkInstallUtil.registerInstallLauncher(this)
+
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val useBgUtilPoTokenServer = preferences.getBoolean("use_bgutils_potoken_generator", false)
+                val bgUtilsMethod = preferences.getString("bgutils_potoken_method", "server")
+                val requiresServer = useBgUtilPoTokenServer && bgUtilsMethod == "server"
+                if (requiresServer) {
+                    BgUtilsPoTokenGeneratorUtil.acquireServer(this@MainActivity)
+                }
+            }
+        }
+
         val intent = intent
         handleIntents(intent)
 
-        askAutoUpdatePreferences()
+        callAutoUpdates(firstRun = intent.getBooleanExtra(WelcomeActivity.EXTRA_FROM_WELCOME, false))
     }
     override fun onSaveInstanceState(savedInstanceState: Bundle) {
         super.onSaveInstanceState(savedInstanceState)
@@ -384,15 +386,7 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        //incognito header
-        val incognitoHeader = findViewById<TextView>(R.id.incognito_header)
-        if (preferences.getBoolean("incognito", false)){
-            incognitoHeader.visibility = View.VISIBLE
-            window.statusBarColor = (incognitoHeader.background as ColorDrawable).color
-        }else{
-            window.statusBarColor = getColor(android.R.color.transparent)
-            incognitoHeader.visibility = View.GONE
-        }
+        window.statusBarColor = getColor(android.R.color.transparent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -493,139 +487,10 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun askAutoUpdatePreferences() {
-        if (preferences.getBoolean("asked_auto_update_preferences", false)) {
-            callAutoUpdates()
-            return
-        }
-
-        val builder = MaterialAlertDialogBuilder(this)
-        builder.setTitle(context.getString(R.string.update))
-        builder.setIcon(R.drawable.ic_info)
-        val view = layoutInflater.inflate(R.layout.dialog_ask_update_preferences, null)
-
-        val updateAppLayout = view.findViewById<View>(R.id.update_app)
-        val updateAppSwitch = updateAppLayout.findViewById<MaterialSwitch>(R.id.preference_switch)
-        updateAppLayout.findViewById<MaterialButton>(R.id.preference_icon).apply {
-            icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_update_app)
-            isVisible = true
-        }
-        updateAppLayout.findViewById<TextView>(R.id.preference_title).text = getString(R.string.update_app)
-        updateAppLayout.findViewById<TextView>(R.id.preference_summary).apply {
-            text = getString(R.string.update_app_summary)
-            isVisible = true
-        }
-        updateAppSwitch.isChecked = true
-        updateAppLayout.setOnClickListener {
-            updateAppSwitch.isChecked = !updateAppSwitch.isChecked
-        }
-        updateAppLayout.isVisible = BuildConfig.FLAVOR == "github"
-
-        val updateYTDLLayout = view.findViewById<View>(R.id.update_ytdl)
-        val updateYTDLSwitch = updateYTDLLayout.findViewById<MaterialSwitch>(R.id.preference_switch)
-        updateYTDLLayout.findViewById<MaterialButton>(R.id.preference_icon).apply {
-            icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_update)
-            isVisible = true
-        }
-        updateYTDLLayout.findViewById<TextView>(R.id.preference_title).text = getString(R.string.auto_update_ytdlp)
-        updateYTDLLayout.findViewById<TextView>(R.id.preference_summary).apply {
-            text = getString(R.string.auto_update_ytdlp_summary)
-            isVisible = true
-        }
-        updateYTDLSwitch.isChecked = true
-        updateYTDLLayout.setOnClickListener {
-            updateYTDLSwitch.isChecked = !updateYTDLSwitch.isChecked
-        }
-
-        builder.setView(view)
-        builder.setCancelable(false)
-        builder.setPositiveButton(
-            context.getString(R.string.ok)
-        ) { _: DialogInterface?, _: Int ->
-            preferences.edit(commit = true) {
-                putBoolean("update_app", updateAppSwitch.isChecked)
-                putBoolean("auto_update_ytdlp", updateYTDLSwitch.isChecked)
-                putBoolean("asked_auto_update_preferences", true)
-            }
-
-            if (updateAppSwitch.isChecked) {
-                UpdateCheckWorker.schedule(context)
-            }
-
-            callAutoUpdates(firstRun = true)
-        }
-
-        val dialog = builder.create()
-        dialog.show()
-    }
-
-
     private fun callAutoUpdates(firstRun : Boolean = false) {
-        if (BuildConfig.FLAVOR == "github" && preferences.getBoolean("update_app", false)) {
-            val updateUtil = UpdateUtil(this)
-            CoroutineScope(Dispatchers.IO).launch {
-                val res = updateUtil.tryGetNewVersion()
-                if (res.isSuccess) {
-                    if (preferences.getBoolean("automatic_backup", false)) {
-                        settingsViewModel.backup()
-                    }
-                    withContext(Dispatchers.Main) {
-                        UiUtil.showNewAppUpdateSnackBar(
-                            res.getOrNull()!!,
-                            this@MainActivity,
-                            findViewById<LinearLayout>(R.id.notification_container),
-                            findViewById(R.id.frame_layout),
-                            navigationBarView,
-                            layoutInflater,
-                            updateUtil,
-                            this@MainActivity,
-                            preferences,
-                            installLauncher
-                        )
-                    }
-                }
-
-                val skipRemindingPackageUpdate = preferences.getStringSet("skip_reminding_package_update", setOf())!!.toMutableSet()
-                RuntimeManager.getInstance().assertInit()
-                RuntimeManager.packages.forEach { pkg ->
-                    val instance = pkg.plugin.getInstance()
-                    if (instance.bundledVersion.isNullOrBlank() && instance.downloadedVersion.isNullOrBlank()) return@forEach
-
-                    instance.getReleases().apply {
-                        val releases = this.getOrElse { listOf() }
-                        if (releases.isEmpty()) return@apply
-
-                        val latestRelease = releases.first()
-                        if (latestRelease.isBundled || latestRelease.isInstalled) return@apply
-                        if (latestRelease.oldVersion) return@apply
-                        if (skipRemindingPackageUpdate.contains(latestRelease.tag_name)) return@apply
-
-                        skipRemindingPackageUpdate.add(latestRelease.tag_name)
-                        preferences.edit().putStringSet("skip_reminding_package_update", skipRemindingPackageUpdate).apply()
-                        withContext(Dispatchers.Main) {
-                            UiUtil.showNewPackageUpdateSnackBar(
-                                latestRelease,
-                                pkg,
-                                this@MainActivity,
-                                findViewById<LinearLayout>(R.id.notification_container),
-                                findViewById(R.id.frame_layout),
-                                navigationBarView,
-                                layoutInflater,
-                                this@MainActivity,
-                                installLauncher
-                            ) { result ->
-                                result.onSuccess {
-                                    RuntimeManager.reInit(this@MainActivity)
-                                }.onFailure { f ->
-                                    Snackbar.make(findViewById(R.id.frame_layout), f.message ?: "", Snackbar.LENGTH_LONG).apply {
-                                        anchorView = navigationBarView
-                                        show()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        resultViewModel.checkForUpdates { //on app update found
+            if (preferences.getBoolean("automatic_backup", false)) {
+                settingsViewModel.backup()
             }
         }
         if (preferences.getBoolean("auto_update_ytdlp", false)){

@@ -46,7 +46,6 @@
     <string name="warning">ئاگاداری</string>
     <string name="couldnt_find_apk">نەتوانرا APK ێکی گونجاو بدۆزێتەوە</string>
     <string name="new_template">داڕێژەی نوێ</string>
-    <string name="update_ytdl_nightly">وەشانی شەوانەی yt-dlp</string>
     <string name="command_download_notification_channel_description">ئاگاداریەک کە بەرەوپێشچوونی دابەزاندن نیشان دەدات بە بەکارهێنانی فەرمانی yt-dlp</string>
     <string name="add_chapters">بەشەکانی ڤیدیۆ</string>
     <string name="concurrent_downloads_summary">ژمارەی داگرتنەکان جێبەجێ دەکرێت لە هەمان کاتدا</string>
@@ -77,7 +76,7 @@
     <string name="downloads">دابەزاندنەکان</string>
     <string name="select_format">فۆرمات هەڵبژێرە</string>
     <string name="limit_rate">سنووری خێرایی</string>
-    <string name="Open_File">پەڕگە بکەرەوە</string>
+    <string name="open_file">پەڕگە بکەرەوە</string>
     <string name="you_are_going_to_delete">دەسڕێتەوە</string>
     <string name="request_permission_desc">ئەم بەرنامەیە پێویستی بە مۆڵەتی فایل هەیە بۆ هەڵگرتنی داگرتنەکان لەسەر ئامێرەکە</string>
     <string name="version">وەشان</string>
@@ -150,7 +149,6 @@
     <string name="clear_saved">پاککردنەوە هەڵگیراوە</string>
     <string name="schedule">خشتەسازی</string>
     <string name="download_over_metered_networks">داگرتن لە ڕێگەی تۆڕەکانی پێوەرەوە</string>
-    <string name="update_ytdl_master">وەشانی سەرەکی yt-dlp</string>
     <string name="clear_temporary_files_summary">پەڕگە پاشەکەوتکراوەکانی دابەزاندنە تێکشکاوەکان/هەڵەکان/هەڵوەشاوەکان لاببە</string>
     <string name="user_agent_header">سەردێڕی بەکارهێنەر-بریکار</string>
     <string name="saved">پاشەکەوتکراوەکان</string>
@@ -318,7 +316,6 @@
     <string name="invert_selected">پێچەوانەی دیاریکراو</string>
     <string name="download_over_metered_networks_summary">داگرتنەکان بە بەکارهێنانی هەر جۆرە تۆڕێک. بە پێچەوانەوە چاوەڕێی تۆڕێکی بێپێوراو دەکات</string>
     <string name="blue">شین</string>
-    <string name="update_ytdl_stable">وەشانی جێگیر Yt-dlp</string>
     <string name="confirm_delete_logs_desc">سڕینەوەی تەواوی لیستی تۆمار بە هەمیشەیی.</string>
     <string name="crop_thumb">بڕینی وێنەی بچووک</string>
     <string name="force_keyframes">بەهێزی Keyframes لە بڕین</string>
@@ -449,7 +446,7 @@
     <string name="wait_for_video">چاوەڕێی ڤیدیۆکە بکە</string>
     <string name="retry_every">دووبارەی بکەرەوە هەموو</string>
     <string name="player_client">ڕاژەخوازی لێدەر</string>
-    <string name="player_client_summary"><![CDATA[YouTube Player Clients & PO Token]]></string>
+    <string name="player_client_summary">YouTube Player Clients &amp; PO Token</string>
     <string name="use_app_language_for_metadata">زمانی بەرنامە بەکاربهێنە بۆ مێتاداتا</string>
     <string name="app_icon_change">ئایکۆنەکە لەوانەیە بگۆڕێت و بەرنامەکە دادەخرێت</string>
     <string name="custom">ڕاسپێردراو</string>

@@ -34,7 +34,7 @@
     <string name="search_hint">Zoek of voer URL in</string>
     <string name="downloads">Downloads</string>
     <string name="source_code">Bron­code</string>
-    <string name="Open_File">Bestand openen</string>
+    <string name="open_file">Bestand openen</string>
     <string name="you_are_going_to_delete">Verwĳderen</string>
     <string name="version">Versie</string>
     <string name="ok">Oké</string>
@@ -305,7 +305,6 @@
     <string name="retry_missing_downloads">Ontbrekende downloads opnieuw proberen</string>
     <string name="save_auto_subs">Automatische ondertitels opslaan</string>
     <string name="sponsorblock_nonmusic">Niet-muziek- en offtopic-gedeelten</string>
-    <string name="update_ytdl_nightly">Nachtelĳke versie van yt-dlp</string>
     <string name="finished_download_notification_channel_description">Meldingen voor voltooide downloads</string>
     <string name="download_over_metered_networks">Downloaden via gemeten netwerken</string>
     <string name="my_filename_templates">Mĳn bestandsnaam­sjablonen</string>
@@ -327,7 +326,6 @@
     <string name="confirm_delete_cookies_desc">Alle cookies permanent verwĳderen</string>
     <string name="preferred_search_engine_summary">De te gebruiken zoek­machine voor zoek­opdrachen in de app</string>
     <string name="pure_theme_summary">Puur zwart/wit thema</string>
-    <string name="update_ytdl_stable">Stabiele versie van yt-dlp</string>
     <string name="minute">Minuut</string>
     <string name="second">Seconde</string>
     <string name="format_importance">Prioriteit formaten</string>
@@ -365,7 +363,6 @@
     <string name="save_for_later">Download opslaan voor later?</string>
     <string name="update_formats_background">Formaten op de achter­grond bĳ­werken</string>
     <string name="embed_metadata_summary">Parseert en sluit meta­gegevens in het audio­bestand in</string>
-    <string name="update_ytdl_master">Ontwikkelings­versie van yt-dlp</string>
     <string name="format_smallest">Kleinste formaat (per resolutie)</string>
     <string name="update_formats_summary">Haalt de formaten direct op wanneer de download­kaart verschĳnt</string>
     <string name="add_template_first">U moet tenminste één opdrachtsjabloon aangemaakt hebben!</string>
@@ -453,7 +450,7 @@
     <string name="prefer_container_over_codec_audio">geef voorkeur aan de container dan codec voor audio downloads</string>
     <string name="prefer_container_over_codec_audio_summary">Met deze optie ingeschakeld, zal de bij voorkeur gekozen audio codec worden genegeerd en aleen de container veranderen</string>
     <string name="player_client">Speler cliënt</string>
-    <string name="player_client_summary"><![CDATA[Youtube Speler Cliënten &amp; PO Tokens]]></string>
+    <string name="player_client_summary">Youtube Speler Cliënten &amp; PO Tokens</string>
     <string name="use_app_language_for_metadata">Gebruik app taal voor metadata</string>
     <string name="layout">Formaat</string>
     <string name="use_only_po_token">Gebruik aleen PO Tokens (negeer speler cliënt)</string>

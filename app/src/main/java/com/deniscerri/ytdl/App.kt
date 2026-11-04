@@ -65,12 +65,6 @@ class App : Application() {
                     .filter { it.status == ObserveSourcesRepository.SourceStatus.ACTIVE && !it.hasReachedEnd() }
                     .forEach { scheduler.schedule(it) }         // idempotent: FLAG_UPDATE_CURRENT updates in place
 
-                val useBgUtilPoTokenServer = sharedPreferences.getBoolean("use_bgutils_potoken_generator", false)
-                val bgUtilsMethod = sharedPreferences.getString("bgutils_potoken_method", "server")
-                val requiresServer = useBgUtilPoTokenServer && bgUtilsMethod == "server"
-                if (requiresServer) {
-                    BgUtilsPoTokenGeneratorUtil.acquireServer(this@App)
-                }
             }catch (e: Exception){
                 Looper.prepare().runCatching {
                     Toast.makeText(this@App, e.message, Toast.LENGTH_SHORT).show()
@@ -94,6 +88,8 @@ class App : Application() {
             PreferenceManager.setDefaultValues(this, R.xml.processing_preferences, true)
             PreferenceManager.setDefaultValues(this, R.xml.folders_preference, true)
             PreferenceManager.setDefaultValues(this, R.xml.updating_preferences, true)
+            PreferenceManager.setDefaultValues(this, R.xml.ytdlp_update_preferences, true)
+            PreferenceManager.setDefaultValues(this, R.xml.app_update_preferences, true)
             PreferenceManager.setDefaultValues(this, R.xml.advanced_preferences, true)
             sp.edit().putInt("spl", SPL).apply()
         }

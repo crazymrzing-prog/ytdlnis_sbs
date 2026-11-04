@@ -34,6 +34,7 @@ import androidx.core.view.setPadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.exoplayer.offline.Download
@@ -347,23 +348,27 @@ class DownloadMultipleBottomSheetDialog : BottomSheetDialogFragment(), Configure
                 }
             }
 
-            override fun onFormatUpdated(url: String, formats: List<Format>) {
-                downloadViewModel.updateProcessingFormatByUrl(url, formats)
-            }
-
-            override fun onItemUnavailable(url: String) {
-                downloadViewModel.removeUnavailableDownloadAndResultByURL(url)
-            }
-
             override fun onContinueOnBackground() {
-                requireActivity().lifecycleScope.launch {
+                val hostActivity = activity ?: return
+                hostActivity.lifecycleScope.launch {
                     withContext(Dispatchers.IO){
                         downloadViewModel.continueUpdatingFormatsOnBackground(listAdapter.getCheckedItemsOrNull())
                     }
                     downloadViewModel.processingItemsJob?.cancel(CancellationException())
                     downloadViewModel.processingItemsJob = null
 
-                    dismiss()
+                    if (isAdded) dismiss()
+                }
+            }
+        }
+
+        // updates started from the format sheet, saved to the processing items here
+        lifecycleScope.launch {
+            formatViewModel.formatUpdates.collect { event ->
+                when (event) {
+                    is FormatViewModel.FormatUpdateEvent.Updated -> downloadViewModel.updateProcessingFormatByUrl(event.url, event.formats)
+                    is FormatViewModel.FormatUpdateEvent.Unavailable -> downloadViewModel.removeUnavailableDownloadAndResultByURL(event.url)
+                    else -> {}
                 }
             }
         }
@@ -623,6 +628,12 @@ class DownloadMultipleBottomSheetDialog : BottomSheetDialogFragment(), Configure
                                         cutClicked = {},
                                         cutDisabledClicked = {},
                                         cutValueChanged = {},
+                                        mergeCutsChanged = { mergeCuts ->
+                                            items.forEach { it.mergeCuts = mergeCuts }
+                                            requireActivity().lifecycleScope.launch {
+                                                items.forEach { downloadViewModel.updateDownload(it) }
+                                            }
+                                        },
                                         extraCommandsClicked = { returnValue ->
                                             val callback = object : ExtraCommandsListener {
                                                 override fun onChangeExtraCommand(c: String) {
@@ -637,6 +648,9 @@ class DownloadMultipleBottomSheetDialog : BottomSheetDialogFragment(), Configure
 
                                             val bottomSheetDialog = AddExtraCommandsDialog(null, callback)
                                             bottomSheetDialog.show(parentFragmentManager, "extraCommands")
+                                        },
+                                        lyricsChanged = {
+                                            CoroutineScope(Dispatchers.IO).launch { items.forEach { downloadViewModel.updateDownload(it) } }
                                         }
                                     )
                                     bottomSheet.show()
@@ -700,6 +714,12 @@ class DownloadMultipleBottomSheetDialog : BottomSheetDialogFragment(), Configure
                                         cutClicked = {},
                                         cutDisabledClicked = {},
                                         cutValueChanged = {},
+                                        mergeCutsChanged = { mergeCuts ->
+                                            items.forEach { it.mergeCuts = mergeCuts }
+                                            requireActivity().lifecycleScope.launch {
+                                                items.forEach { downloadViewModel.updateDownload(it) }
+                                            }
+                                        },
                                         cropClicked = {},
                                         cropDisabledClicked = {},
                                         cropValueChanged = {},
@@ -1003,18 +1023,78 @@ class DownloadMultipleBottomSheetDialog : BottomSheetDialogFragment(), Configure
 
 
         val sortBtn = view.findViewById<MaterialButton>(R.id.sortBtn)
-        sortBtn.setOnClickListener {
-            lifecycleScope.launch {
-                val newSort = withContext(Dispatchers.IO) {
-                    downloadViewModel.toggleProcessingSort()
-                }
+        var currentSortBy = "date"
+        var currentAscending = true
 
-                when(newSort) {
-                    "ASC" -> sortBtn.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_down)
-                    "DESC" -> sortBtn.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_up)
+        fun applyProcessingSort(sortBy: String, ascending: Boolean) {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    downloadViewModel.sortProcessingDownloads(sortBy, ascending)
                 }
+                listAdapter.refresh()
                 recyclerView.scrollTo(0, 0)
+                sortBtn.icon = ContextCompat.getDrawable(
+                    requireContext(),
+                    if (ascending) R.drawable.ic_down else R.drawable.ic_up
+                )
             }
+        }
+
+        sortBtn.setOnClickListener {
+            val sortSheet = BottomSheetDialog(requireContext())
+            sortSheet.requestWindowFeature(Window.FEATURE_NO_TITLE)
+            sortSheet.setContentView(R.layout.processing_sort_sheet)
+
+            val dateOpt = sortSheet.findViewById<TextView>(R.id.date)
+            val authorOpt = sortSheet.findViewById<TextView>(R.id.author)
+            val durationOpt = sortSheet.findViewById<TextView>(R.id.duration)
+            val titleOpt = sortSheet.findViewById<TextView>(R.id.title)
+
+            val sortOptions = listOfNotNull(dateOpt, authorOpt, durationOpt, titleOpt)
+            fun updateIcons() {
+                sortOptions.forEach { it.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.empty, 0, 0, 0) }
+                val activeView = when(currentSortBy) {
+                    "author" -> authorOpt
+                    "duration" -> durationOpt
+                    "title" -> titleOpt
+                    else -> dateOpt
+                }
+                activeView?.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    if (currentAscending) R.drawable.ic_down else R.drawable.ic_up, 0, 0, 0
+                )
+            }
+
+            updateIcons()
+
+            dateOpt?.setOnClickListener {
+                if (currentSortBy == "date") currentAscending = !currentAscending else { currentSortBy = "date"; currentAscending = true }
+                updateIcons()
+                applyProcessingSort("date", currentAscending)
+                sortSheet.dismiss()
+            }
+            authorOpt?.setOnClickListener {
+                if (currentSortBy == "author") currentAscending = !currentAscending else { currentSortBy = "author"; currentAscending = true }
+                updateIcons()
+                applyProcessingSort("author", currentAscending)
+                sortSheet.dismiss()
+            }
+            durationOpt?.setOnClickListener {
+                if (currentSortBy == "duration") currentAscending = !currentAscending else { currentSortBy = "duration"; currentAscending = true }
+                updateIcons()
+                applyProcessingSort("duration", currentAscending)
+                sortSheet.dismiss()
+            }
+            titleOpt?.setOnClickListener {
+                if (currentSortBy == "title") currentAscending = !currentAscending else { currentSortBy = "title"; currentAscending = true }
+                updateIcons()
+                applyProcessingSort("title", currentAscending)
+                sortSheet.dismiss()
+            }
+
+            val displayMetrics = DisplayMetrics()
+            requireActivity().windowManager.defaultDisplay.getMetrics(displayMetrics)
+            sortSheet.behavior.peekHeight = displayMetrics.heightPixels
+            sortSheet.show()
         }
 
     }
@@ -1210,6 +1290,12 @@ class DownloadMultipleBottomSheetDialog : BottomSheetDialogFragment(), Configure
     }
 
     override fun onDismiss(dialog: DialogInterface) {
+        // the format sheet lives in the same fragment manager, so it would outlive this card and keep updating
+        runCatching {
+            (parentFragmentManager.findFragmentByTag("formatSheet") as? DialogFragment)?.dismissAllowingStateLoss()
+        }
+        // closing the format sheet keeps its update going for this card, so stop it here
+        formatViewModel.cancelUpdateFormats()
         lifecycleScope.launch {
             withContext(Dispatchers.IO){
                 downloadViewModel.processingItemsJob?.cancel(CancellationException())

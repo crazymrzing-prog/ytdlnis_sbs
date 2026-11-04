@@ -49,6 +49,7 @@ import com.deniscerri.ytdl.database.viewmodel.DownloadCardViewModel
 import com.deniscerri.ytdl.database.viewmodel.DownloadViewModel
 import com.deniscerri.ytdl.database.viewmodel.HistoryViewModel
 import com.deniscerri.ytdl.ui.adapter.HistoryPaginatedAdapter
+import com.deniscerri.ytdl.util.DragSelectTouchListener
 import com.deniscerri.ytdl.util.Extensions.enableFastScroll
 import com.deniscerri.ytdl.util.Extensions.updateMenuItemBadge
 import com.deniscerri.ytdl.util.FileUtil
@@ -143,6 +144,7 @@ class HistoryFragment : Fragment(), HistoryPaginatedAdapter.OnItemClickListener{
         noResults.isVisible = false
         historyViewModel = ViewModelProvider(this)[HistoryViewModel::class.java]
         recyclerView.adapter = historyAdapter
+        DragSelectTouchListener.attach(recyclerView)
 
         lifecycleScope.launch {
             historyViewModel.paginatedItems.collectLatest {
@@ -710,6 +712,8 @@ class HistoryFragment : Fragment(), HistoryPaginatedAdapter.OnItemClickListener{
 
     private var simpleCallback: ItemTouchHelper.SimpleCallback =
         object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun isItemViewSwipeEnabled() = !DragSelectTouchListener.isDragging
+
             override fun onMove(recyclerView: RecyclerView,viewHolder: RecyclerView.ViewHolder,target: RecyclerView.ViewHolder
             ): Boolean {
                 return false
@@ -811,13 +815,14 @@ class HistoryFragment : Fragment(), HistoryPaginatedAdapter.OnItemClickListener{
 
     override fun onButtonClick(itemID: Long, isPresent: Boolean) {
         if (isPresent){
+            val quickAction = sharedPreferences.getString("history_quick_action", "share")
             lifecycleScope.launch {
                 val item = withContext(Dispatchers.IO){
                     historyViewModel.getByID(itemID)
                 }
 
                 item?.apply {
-                    FileUtil.shareFileIntent(requireContext(), item.downloadPath)
+                    UiUtil.openOrShareFiles(requireActivity(), downloadPath, quickAction == "open")
                 }
             }
 

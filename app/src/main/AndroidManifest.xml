@@ -49,7 +49,6 @@
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="YTDLNIS_SBS"
-        android:localeConfig="@xml/locales_config"
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
@@ -348,6 +347,10 @@
         </activity>
 
         <activity
+            android:name=".ui.welcome.WelcomeActivity"
+            android:configChanges="smallestScreenSize|layoutDirection|orientation|screenSize"
+            android:exported="false" />
+        <activity
             android:name=".ui.more.settings.SettingsActivity"
             android:configChanges="smallestScreenSize|layoutDirection|orientation|screenSize"
             android:exported="true"
@@ -388,7 +391,7 @@
         <activity-alias
             android:name=".quickDownloadShareAlias"
             android:targetActivity=".receiver.ShareActivity"
-            android:enabled="false"
+            android:enabled="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/quick_download"
             android:roundIcon="@mipmap/ic_launcher_round"

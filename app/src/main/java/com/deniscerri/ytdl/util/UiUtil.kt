@@ -178,11 +178,30 @@ object UiUtil {
 
         var filesize = chosenFormat.filesize
         if (!audioFormats.isNullOrEmpty() && filesize > 10L) filesize += audioFormats.sumOf { it.filesize }
+        val isApprox = chosenFormat.isFilesizeApprox || audioFormats?.any { it.isFilesizeApprox } == true
         formatCard.findViewById<TextView>(R.id.file_size).apply {
+            @Suppress("UNCHECKED_CAST")
+            val defaults = (getTag(R.id.file_size) as? Pair<android.content.res.ColorStateList?, android.content.res.ColorStateList>)
+                ?: (androidx.core.view.ViewCompat.getBackgroundTintList(this) to textColors).also { setTag(R.id.file_size, it) }
+            var approxShown = false
             if (showSize) {
-                text = FileUtil.convertFileSize(filesize)
+                val readable = FileUtil.convertFileSize(filesize)
+                approxShown = isApprox && readable != "?"
+                text = if (approxShown) "~ $readable" else readable
             }else{
                 text = "?"
+            }
+            if (approxShown) {
+                androidx.core.view.ViewCompat.setBackgroundTintList(
+                    this,
+                    android.content.res.ColorStateList.valueOf(
+                        com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorTertiary)
+                    )
+                )
+                setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnTertiary))
+            } else {
+                androidx.core.view.ViewCompat.setBackgroundTintList(this, defaults.first)
+                setTextColor(defaults.second)
             }
             setOnClickListener {
                 formatCard.callOnClick()
@@ -717,7 +736,7 @@ object UiUtil {
                     true
                 }
             }
-            DownloadRepository.Status.Queued -> {
+            DownloadRepository.Status.Queued, DownloadRepository.Status.QueuedPaused -> {
                 download!!.text = context.getString(R.string.configure_download)
                 download.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_retries, 0, 0, 0);
                 download.setOnClickListener {
@@ -754,7 +773,7 @@ object UiUtil {
             }
         }
 
-        if (status != DownloadRepository.Status.Queued && status != DownloadRepository.Status.Error){
+        if (status != DownloadRepository.Status.Queued && status != DownloadRepository.Status.QueuedPaused && status != DownloadRepository.Status.Error){
             download?.setOnClickListener {
                 bottomSheet.dismiss()
                 downloadItem(item)
@@ -838,7 +857,7 @@ object UiUtil {
                 }
 
                 setOnClickListener {
-                    FileUtil.shareFileIntent(context, item.downloadPath)
+                    openOrShareFiles(context, item.downloadPath, false)
                 }
             }
         }
@@ -933,11 +952,7 @@ object UiUtil {
         val openFile = bottomSheet.findViewById<Button>(R.id.bottomsheet_open_file_button)
         openFile!!.tag = item.id
         openFile.setOnClickListener{
-            if (item.downloadPath.size == 1) {
-                FileUtil.openFileIntent(context, item.downloadPath.first())
-            }else{
-                openMultipleFilesIntent(context, item.downloadPath)
-            }
+            openOrShareFiles(context, item.downloadPath, true)
         }
 
         val redownload = bottomSheet.findViewById<Button>(R.id.bottomsheet_redownload_button)
@@ -1328,6 +1343,7 @@ object UiUtil {
         cutClicked: (VideoCutListener) -> Unit,
         cutValueChanged: (String) -> Unit,
         cutDisabledClicked: () -> Unit,
+        mergeCutsChanged: (Boolean) -> Unit,
         cropClicked: (VideoCropListener) -> Unit,
         cropValueChanged: (String) -> Unit,
         cropDisabledClicked: () -> Unit,
@@ -1408,6 +1424,14 @@ object UiUtil {
             val adjustChapterView = context.layoutInflater.inflate(R.layout.video_chapter_download_preferences_dialog, null)
             val addChapters = adjustChapterView.findViewById<MaterialSwitch>(R.id.add_chapters)
             addChapters!!.isChecked = items.all { it.videoPreferences.addChapters }
+            if (items.size == 1 && items[0].downloadSections.isNotBlank()) {
+                //chapters would not match the cut video
+                addChapters.isEnabled = false
+                addChapters.isChecked = false
+                items.forEach { it.videoPreferences.addChapters = false }
+                addChaptersClicked(false)
+                calculateAdjustChaptersChangeCount()
+            }
             addChapters.setOnClickListener{
                 addChaptersClicked(addChapters.isChecked)
                 items.forEach { it.videoPreferences.addChapters = addChapters.isChecked }
@@ -1442,7 +1466,7 @@ object UiUtil {
             }
 
             val adjustChapterDialog = MaterialAlertDialogBuilder(context)
-                .setTitle(context.getString(R.string.thumbnail))
+                .setTitle(context.getString(R.string.chapters))
                 .setView(adjustChapterView)
                 .setIcon(R.drawable.ic_chapters)
                 .setNegativeButton(context.resources.getString(R.string.dismiss)) { _: DialogInterface?, _: Int -> }
@@ -1781,6 +1805,15 @@ object UiUtil {
                 if (downloadItem.downloadSections.isNotBlank()) cut.createBadge(context, downloadItem.downloadSections.count())
                 val cutVideoListener = object : VideoCutListener {
 
+                    override fun onMergeCuts(merge: Boolean) {
+                        mergeCutsChanged(merge)
+                        if (merge) {
+                            items.forEach {
+                                it.videoPreferences.addChapters = false
+                            }
+                        }
+                    }
+
                     override fun onChangeCut(list: List<String>) {
                         cut.createBadge(context, list.size)
                         if (list.isEmpty()){
@@ -1792,7 +1825,10 @@ object UiUtil {
                             }
                             cutValueChanged(value)
 
-                            items.forEach { it.videoPreferences.splitByChapters = false }
+                            items.forEach {
+                                it.videoPreferences.splitByChapters = false
+                                it.videoPreferences.addChapters = false
+                            }
                             calculateAdjustChaptersChangeCount()
                         }
 
@@ -1887,9 +1923,51 @@ object UiUtil {
         cutClicked: (VideoCutListener) -> Unit,
         cutDisabledClicked: () -> Unit,
         cutValueChanged: (String) -> Unit,
-        extraCommandsClicked: (changed: (newExtraCommandString: String) -> Unit) -> Unit
+        mergeCutsChanged: (Boolean) -> Unit,
+        extraCommandsClicked: (changed: (newExtraCommandString: String) -> Unit) -> Unit,
+        lyricsClicked: ((changed: () -> Unit) -> Unit)? = null,
+        lyricsChanged: (() -> Unit)? = null
     ){
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+
+        val lyrics = view.findViewById<Chip>(R.id.lyrics)
+        fun updateLyricsBadge() {
+            if (items.size == 1) {
+                val prefs = items.first().audioPreferences
+                lyrics.createBadge(context, if (prefs.embedLyrics || prefs.saveLrc) 1 else 0)
+            }
+        }
+        updateLyricsBadge()
+        lyrics.setOnClickListener {
+            //the preview sheet needs a single item, otherwise just offer the toggles
+            if (items.size == 1 && lyricsClicked != null) {
+                lyricsClicked { updateLyricsBadge() }
+                return@setOnClickListener
+            }
+
+            val lyricsView = context.layoutInflater.inflate(R.layout.audio_lyrics_download_preferences_dialog, null)
+            val embedLyrics = lyricsView.findViewById<MaterialSwitch>(R.id.embed_lyrics)
+            val saveLrc = lyricsView.findViewById<MaterialSwitch>(R.id.save_lrc)
+            embedLyrics.isChecked = items.all { it.audioPreferences.embedLyrics }
+            saveLrc.isChecked = items.all { it.audioPreferences.saveLrc }
+            embedLyrics.setOnClickListener {
+                items.forEach { it.audioPreferences.embedLyrics = embedLyrics.isChecked }
+                updateLyricsBadge()
+                lyricsChanged?.invoke()
+            }
+            saveLrc.setOnClickListener {
+                items.forEach { it.audioPreferences.saveLrc = saveLrc.isChecked }
+                updateLyricsBadge()
+                lyricsChanged?.invoke()
+            }
+
+            MaterialAlertDialogBuilder(context)
+                .setTitle(context.getString(R.string.lyrics))
+                .setView(lyricsView)
+                .setIcon(R.drawable.ic_lyrics)
+                .setNegativeButton(context.resources.getString(R.string.dismiss)) { _: DialogInterface?, _: Int -> }
+                .show()
+        }
 
         val adjustThumbnail = view.findViewById<Chip>(R.id.thumbnail)
         fun calculateAdjustThumbnailChangeCount() {
@@ -2043,11 +2121,15 @@ object UiUtil {
                     cut.createBadge(context, downloadItem.downloadSections.count())
                 }
                 val cutVideoListener = object : VideoCutListener {
+
+                    override fun onMergeCuts(merge: Boolean) {
+                        mergeCutsChanged(merge)
+                    }
+
                     override fun onChangeCut(list: List<String>) {
                         cut.createBadge(context, list.size)
                         if (list.isEmpty()){
                             cutValueChanged("")
-
 
                             splitByChapters.isEnabled = true
                             splitByChapters.isChecked = downloadItem.audioPreferences.splitByChapters
@@ -2596,52 +2678,69 @@ object UiUtil {
         }
     }
 
-    fun openMultipleFilesIntent(context: Activity, path: List<String>){
-        val bottomSheet = BottomSheetDialog(context)
-        bottomSheet.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        bottomSheet.setContentView(R.layout.filepathlist)
+    fun openOrShareFiles(context: Activity, paths: List<String>, isOpen: Boolean) {
+        if (paths.size <= 1) {
+            if (isOpen && paths.isNotEmpty()) {
+                FileUtil.openFileIntent(context, paths.first())
+            } else {
+                FileUtil.shareFileIntent(context, paths)
+            }
+        } else {
+            showPathChooserDialog(context, paths, isOpen)
+        }
+    }
 
-        val list = bottomSheet.findViewById<LinearLayout>(R.id.filepath_list)
+    private fun showPathChooserDialog(context: Activity, paths: List<String>, isOpen: Boolean) {
+        val names = paths.map { File(it).name }.toTypedArray()
+        val checked = BooleanArray(paths.size) { !isOpen }
+        var selectedIndex = -1
 
-        list?.apply {
-            path.forEach {path ->
-                val file = File(path)
-                val item = context.layoutInflater.inflate(R.layout.filepath_card, list, false)
-                item.apply {
-                    findViewById<TextView>(R.id.file_name).text = file.nameWithoutExtension
+        val builder = MaterialAlertDialogBuilder(context)
+            .setTitle(if (isOpen) context.getString(R.string.open_file) else context.getString(R.string.share))
+            .setNegativeButton(context.getString(R.string.cancel), null)
+            .setPositiveButton(context.getString(R.string.ok), null)
 
-                    findViewById<TextView>(R.id.duration).apply {
-                        val duration = file.getMediaDuration(context)
-                        isVisible = duration > 0
-                        text = duration.toStringDuration(Locale.US)
-                    }
+        var okButton: Button? = null
 
+        if (isOpen) {
+            builder.setSingleChoiceItems(names, -1) { _, which ->
+                selectedIndex = which
+                okButton?.isEnabled = true
+            }
+        } else {
+            builder.setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+                okButton?.isEnabled = checked.any { it }
+            }
+            builder.setNeutralButton(context.getString(R.string.toggle_all), null)
+        }
 
-                    findViewById<TextView>(R.id.filesize).text = FileUtil.convertFileSize(file.length())
-                    findViewById<TextView>(R.id.extension).text = file.extension.uppercase()
-                    if (!file.exists()){
-                        isEnabled = false
-                        alpha = 0.7f
-                    }
-                    isEnabled = file.exists()
-                    setOnClickListener {
-                        FileUtil.openFileIntent(context, path)
-                        bottomSheet.dismiss()
-                    }
+        val dialog = builder.create()
+        dialog.show()
+
+        val ok = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        okButton = ok
+        ok.isEnabled = !isOpen
+        if (!isOpen) {
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener {
+                val newState = checked.any { !it }
+                for (i in checked.indices) {
+                    checked[i] = newState
+                    dialog.listView.setItemChecked(i, newState)
                 }
-                list.addView(item)
-
+                ok.isEnabled = newState
             }
         }
 
-        bottomSheet.show()
-        val displayMetrics = DisplayMetrics()
-        context.windowManager.defaultDisplay.getMetrics(displayMetrics)
-        bottomSheet.behavior.peekHeight = displayMetrics.heightPixels
-        bottomSheet.window!!.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
+        ok.setOnClickListener {
+            if (isOpen) {
+                if (selectedIndex >= 0) FileUtil.openFileIntent(context, paths[selectedIndex])
+            } else {
+                val selected = paths.filterIndexed { i, _ -> checked[i] }
+                if (selected.isNotEmpty()) FileUtil.shareFileIntent(context, selected)
+            }
+            dialog.dismiss()
+        }
     }
 
     private fun showAddEditCustomYTDLPSource(context: Activity, title: String = "", repo: String = "", created: (title: String, repo: String) -> Unit) {
@@ -2684,7 +2783,7 @@ object UiUtil {
         }, 300)
     }
 
-    fun showYTDLSourceBottomSheet(context: Activity, preferences: SharedPreferences, selectedSource: (title: String, repo: String) -> Unit) {
+    fun showYTDLCustomSourceBottomSheet(context: Activity, preferences: SharedPreferences, selectedSource: (title: String, repo: String) -> Unit) {
         val bottomSheet = BottomSheetDialog(context)
         bottomSheet.requestWindowFeature(Window.FEATURE_NO_TITLE)
         bottomSheet.setContentView(R.layout.ytdlp_sources_list)
@@ -2705,18 +2804,16 @@ object UiUtil {
                 }
             }
         }
-
         val defaultSourceTitles = context.getStringArray(R.array.ytdlp_source)
         val defaultSourceValues = context.getStringArray(R.array.ytdlp_source_values)
+
         val tmp = list.toMutableList()
-        tmp.addAll(0, defaultSourceTitles.mapIndexed { index, s -> "${s}___${defaultSourceValues[index]}" })
         tmp.forEach { s ->
             val arr = s.split("___")
             if (arr.size < 2) return@forEach
 
             val title = arr[0]
             val source = arr[1]
-            val isEditable = !defaultSourceValues.contains(source)
             val child = LayoutInflater.from(context).inflate(R.layout.custom_ytdlp_source, null)
             child.findViewById<MaterialCardView>(R.id.sampleCustomSource).setOnClickListener {
                 bottomSheet.dismiss()
@@ -2727,7 +2824,7 @@ object UiUtil {
                 text = title
             }
             child.findViewById<RadioButton>(R.id.sampleRadioBtn).apply {
-                isChecked = preferences.getString("ytdlp_source", "stable") == source
+                isChecked = preferences.getString("ytdlp_source", "nightly") == source
                 setOnClickListener {
                     bottomSheet.dismiss()
                     selectedSource(title, source)
@@ -2735,7 +2832,7 @@ object UiUtil {
             }
             child.findViewById<TextView>(R.id.sampleRepo).text = source
             child.findViewById<View>(R.id.options).apply {
-                isVisible = isEditable
+                isVisible = true
                 setOnClickListener {
                     val popup = PopupMenu(context, it)
                     popup.menuInflater.inflate(R.menu.custom_ytdlp_source_menu, popup.menu)
@@ -2762,7 +2859,8 @@ object UiUtil {
                                     preferences.edit()
                                         .putStringSet("custom_ytdlp_sources", list.toSet()).apply()
                                     if (child.findViewById<RadioButton>(R.id.sampleRadioBtn).isChecked) {
-                                        parentView.children.first().performClick()
+                                        selectedSource(defaultSourceTitles.first(), defaultSourceValues.first())
+                                        bottomSheet.dismiss()
                                     }
                                     parentView.removeView(child)
                                 }
@@ -2783,33 +2881,6 @@ object UiUtil {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         )
-    }
-
-    fun showNewAppUpdateSnackBar(
-        v: GithubRelease,
-        context: Activity,
-        container: LinearLayout,
-        frameLayout: View,
-        anchorView: View?,
-        layoutInflater: LayoutInflater,
-        updateUtil: UpdateUtil,
-        lifecycleOwner: LifecycleOwner,
-        preferences: SharedPreferences,
-        installLauncher: ActivityResultLauncher<Intent>
-    ) {
-        val customView = layoutInflater.inflate(R.layout.layout_update_snackbar, null)
-        customView.findViewById<TextView>(R.id.newVersionTitle).text = context.getString(R.string.version_ready_to_download, v.tag_name)
-        val triggerAction = View.OnClickListener {
-            container.removeView(customView)
-            showNewAppUpdateDialog(v, context, updateUtil, lifecycleOwner, preferences, installLauncher)
-        }
-
-        customView.setOnClickListener(triggerAction)
-        customView.findViewById<View>(R.id.btn_close_update).setOnClickListener {
-            container.removeView(customView)
-        }
-
-        container.addView(customView)
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -2909,33 +2980,6 @@ object UiUtil {
                 }
             }
         }
-    }
-
-    fun showNewPackageUpdateSnackBar(
-        v: PackageBase.PackageRelease,
-        packageItem: PackageItem,
-        context: Activity,
-        container: LinearLayout,
-        frameLayout: View,
-        anchorView: View?,
-        layoutInflater: LayoutInflater,
-        lifecycleOwner: LifecycleOwner,
-        installLauncher: ActivityResultLauncher<Intent>,
-        onResult: (result: Result<Unit>) -> Unit
-    ) {
-        val customView = layoutInflater.inflate(R.layout.layout_package_update_snackbar, null)
-        val triggerAction = View.OnClickListener {
-            container.removeView(customView)
-            showNewReleaseUpdateDialog(v, packageItem, context, lifecycleOwner, frameLayout, anchorView, installLauncher, onResult)
-        }
-
-        customView.setOnClickListener(triggerAction)
-        customView.findViewById<View>(R.id.btn_close_update).setOnClickListener {
-            container.removeView(customView)
-        }
-        customView.findViewById<TextView>(R.id.newVersionTitle).text = context.getString(R.string.package_version_ready_to_download, packageItem.title, v.tag_name)
-
-        container.addView(customView)
     }
 
     fun showNewReleaseUpdateDialog(

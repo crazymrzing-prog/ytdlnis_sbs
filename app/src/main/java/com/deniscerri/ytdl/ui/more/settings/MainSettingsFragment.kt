@@ -14,8 +14,6 @@ import android.view.View
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
 import androidx.core.text.layoutDirection
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -40,6 +38,8 @@ import com.deniscerri.ytdl.database.models.SearchHistoryItem
 import com.deniscerri.ytdl.database.models.TemplateShortcut
 import com.deniscerri.ytdl.database.models.observeSources.ObserveSourcesItem
 import com.deniscerri.ytdl.database.viewmodel.SettingsViewModel
+import com.deniscerri.ytdl.util.LocaleUtil
+import com.deniscerri.ytdl.util.BackupSettingsUtil
 import com.deniscerri.ytdl.util.FileUtil
 import com.deniscerri.ytdl.util.ThemeUtil
 import com.deniscerri.ytdl.util.UiUtil
@@ -53,7 +53,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.util.Locale
 
 
 class MainSettingsFragment : PreferenceFragmentCompat() {
@@ -94,7 +93,7 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         editor = preferences.edit()
 
         val appearance = findPreference<Preference>("appearance")
-        val separator = if (Locale(preferences.getString("app_language", "en")!!).layoutDirection == LayoutDirection.RTL) "،" else ","
+        val separator = if (LocaleUtil.currentLocale().layoutDirection == LayoutDirection.RTL) "،" else ","
         appearance?.summary = "${if (Build.VERSION.SDK_INT < 33) getString(R.string.language) + "$separator " else ""}${getString(R.string.Theme)}$separator ${getString(R.string.accents)}$separator ${getString(R.string.preferred_search_engine)}"
         appearance?.setOnPreferenceClickListener {
             navController.navigate(R.id.action_mainSettingsFragment_to_appearanceSettingsFragment)
@@ -159,6 +158,11 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
             }
         }
 
+        findPreference<Preference>("translators")?.setOnPreferenceClickListener {
+            TranslatorsDialog.show(requireContext())
+            true
+        }
+
         backup!!.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
                 val builder = MaterialAlertDialogBuilder(requireContext())
@@ -207,7 +211,7 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                                 getString(R.string.backup_created_successfully),
                                 Snackbar.LENGTH_LONG
                             )
-                            s.setAction(R.string.Open_File) {
+                            s.setAction(R.string.open_file) {
                                 FileUtil.openFileIntent(requireActivity(), pathResult.getOrNull()!!)
                             }
                             s.show()
@@ -230,6 +234,7 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "*/*"
+                    putExtra(Intent.EXTRA_MIME_TYPES, BackupSettingsUtil.RESTORE_MIME_TYPES)
                 }
                 intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -285,159 +290,8 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
             }
             lifecycleScope.launch {
                 runCatching {
-                    val ip = requireContext().contentResolver.openInputStream(result.data!!.data!!)
-                    val r = BufferedReader(InputStreamReader(ip))
-                    val total: java.lang.StringBuilder = java.lang.StringBuilder()
-                    var line: String?
-                    while (r.readLine().also { line = it } != null) {
-                        total.append(line).append('\n')
-                    }
-
-                    //PARSE RESTORE JSON
-                    val json = Gson().fromJson(total.toString(), JsonObject::class.java)
-                    val restoreData = RestoreAppDataItem()
-                    val parsedDataMessage = StringBuilder()
-
-                    if (json.has("settings")) {
-                        restoreData.settings = json.getAsJsonArray("settings").map {
-                            Gson().fromJson(it.toString().replace("^\"|\"$", ""), BackupSettingsItem::class.java)
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.settings)}: ${restoreData.settings!!.size}")
-                    }
-
-                    if (json.has("searchResults")) {
-                        restoreData.searchResults = json.getAsJsonArray("searchResults").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), ResultItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.search_results)}: ${restoreData.searchResults!!.size}")
-
-                    }
-
-                    if (json.has("downloads")) {
-                        restoreData.downloads = json.getAsJsonArray("downloads").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), HistoryItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.downloads)}: ${restoreData.downloads!!.size}")
-
-                    }
-
-                    if (json.has("queued")) {
-                        restoreData.queued = json.getAsJsonArray("queued").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), DownloadItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.queue)}: ${restoreData.queued!!.size}")
-                    }
-
-                    if (json.has("scheduled")) {
-                        restoreData.scheduled = json.getAsJsonArray("scheduled").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), DownloadItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.scheduled)}: ${restoreData.scheduled!!.size}")
-                    }
-
-                    if (json.has("cancelled")) {
-                        restoreData.cancelled = json.getAsJsonArray("cancelled").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), DownloadItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.cancelled)}: ${restoreData.cancelled!!.size}")
-                    }
-
-                    if (json.has("errored")) {
-                        restoreData.errored = json.getAsJsonArray("errored").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), DownloadItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.errored)}: ${restoreData.errored!!.size}")
-                    }
-
-                    if (json.has("saved")) {
-                        restoreData.saved = json.getAsJsonArray("saved").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), DownloadItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.saved)}: ${restoreData.saved!!.size}")
-                    }
-
-                    if (json.has("cookies")) {
-                        restoreData.cookies = json.getAsJsonArray("cookies").map {
-                            val item =
-                                Gson().fromJson(it.toString().replace("^\"|\"$", ""), CookieItem::class.java)
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.cookies)}: ${restoreData.cookies!!.size}")
-                    }
-
-                    if (json.has("templates")) {
-                        restoreData.templates = json.getAsJsonArray("templates").map {
-                            val item = Gson().fromJson(
-                                it.toString().replace("^\"|\"$", ""),
-                                CommandTemplate::class.java
-                            )
-                            item.id = 0L
-                            item
-                        }
-                        parsedDataMessage.appendLine("${getString(R.string.command_templates)}: ${restoreData.templates!!.size}")
-                    }
-
-                    if (json.has("shortcuts")) {
-                        restoreData.shortcuts = json.getAsJsonArray("shortcuts").map {
-                            val item = Gson().fromJson(
-                                it.toString().replace("^\"|\"$", ""),
-                                TemplateShortcut::class.java
-                            )
-                            item.id = 0L
-                            item
-                        }
-
-                        parsedDataMessage.appendLine("${getString(R.string.shortcuts)}: ${restoreData.shortcuts!!.size}")
-
-                    }
-
-                    if (json.has("search_history")) {
-                        restoreData.searchHistory = json.getAsJsonArray("search_history").map {
-                            val item = Gson().fromJson(
-                                it.toString().replace("^\"|\"$", ""),
-                                SearchHistoryItem::class.java
-                            )
-                            item.id = 0L
-                            item
-                        }
-
-                        parsedDataMessage.appendLine("${getString(R.string.search_history)}: ${restoreData.searchHistory!!.size}")
-                    }
-
-                    if (json.has("observe_sources")) {
-                        restoreData.observeSources = json.getAsJsonArray("observe_sources").map {
-                            val item = Gson().fromJson(
-                                it.toString().replace("^\"|\"$", ""),
-                                ObserveSourcesItem::class.java
-                            )
-                            item.id = 0L
-                            item
-                        }
-
-                        parsedDataMessage.appendLine("${getString(R.string.observe_sources)}: ${restoreData.observeSources!!.size}")
-                    }
+                    val (restoreData, summary) = BackupSettingsUtil.parse(requireContext(), result.data!!.data!!)
+                    val parsedDataMessage = StringBuilder(summary)
 
                     showAppRestoreInfoDialog(
                         onMerge = {
@@ -513,14 +367,6 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         builder.setPositiveButton(
             getString(R.string.ok)
         ) { _: DialogInterface?, _: Int ->
-            if(data.settings != null){
-                val languageValue = preferences.getString("app_language", "en")
-                if (languageValue == "system") {
-                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(null))
-                }else{
-                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(languageValue.toString()))
-                }
-            }
             ThemeUtil.recreateAllActivities()
         }
 

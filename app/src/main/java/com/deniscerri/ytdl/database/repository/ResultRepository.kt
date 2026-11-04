@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Patterns
 import androidx.preference.PreferenceManager
 import com.deniscerri.ytdl.database.DBManager.SORTING
+import com.deniscerri.ytdl.database.Pagination
 import com.deniscerri.ytdl.database.dao.CommandTemplateDao
 import com.deniscerri.ytdl.database.dao.ResultDao
 import com.deniscerri.ytdl.database.models.ChapterItem
@@ -92,16 +93,11 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
         return GoogleApiUtil.getSearchSuggestions(searchQuery)
     }
 
-    fun getStreamingUrlAndChapters(url: String) : Pair<List<String>, List<ChapterItem>?> {
-//        val newPipeTrial = if (isUsingNewPipeExtractorDataFetching()) {
-//            newPipeUtil.getStreamingUrlAndChapters(url)
-//        }else {
-//            Result.failure(Throwable())
-//        }
-//        if (newPipeTrial.isFailure){
-//            val res = ytdlpUtil.getStreamingUrlAndChapters(url)
-//            return res.getOrDefault(Pair(listOf(""), null))
-//        }
+    suspend fun getStreamingUrlAndChapters(url: String) : Pair<List<String>, List<ChapterItem>?> {
+        if (url.isYoutubeURL()) {
+            val newPipeTrial = runCatching { newPipeUtil.getStreamingUrlAndChapters(url) }.getOrNull()
+            newPipeTrial?.getOrNull()?.let { return it }
+        }
 
         return ytdlpUtil.getStreamingUrlAndChapters(url)
             .getOrDefault(Pair(listOf(""), null))
@@ -316,7 +312,7 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
         return itemsToReturn
     }
 
-    fun getFormats(url: String, source : String? = null) : List<Format> {
+    suspend fun getFormats(url: String, source : String? = null, ignoreInfoJson: Boolean = false) : List<Format> {
         val formatSource = source ?: sharedPreferences.getString("formats_source", "yt-dlp")
         val res = if (url.isYoutubeURL()) {
             when(formatSource) {
@@ -337,7 +333,7 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
         return if (res.isSuccess){
             res.getOrNull()!!
         }else{
-            ytdlpUtil.getFormats(url)
+            ytdlpUtil.getFormats(url, ignoreInfoJson)
         }
     }
 
@@ -404,15 +400,13 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
     }
 
     fun getAll() : List<ResultItem> {
-        return resultDao.getAll()
+        return Pagination.keysetAsc({ it.id }) { afterId, limit ->
+            resultDao.getAllPaged(afterId, limit)
+        }
     }
 
-    fun getAllByIDs(ids: List<Long>) : List<ResultItem> {
-        return resultDao.getAllByIDs(ids)
-    }
-
-    fun updateID(id: Long, newID: Long) {
-        resultDao.updateID(id, newID)
+    fun reorder(ids: List<Long>) {
+        resultDao.reorder(ids)
     }
 
     suspend fun getResultsFromSource(inputQuery: String, resetResults: Boolean, addToResults: Boolean = true, singleItem: Boolean = false) : List<ResultItem> {

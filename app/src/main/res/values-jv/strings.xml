@@ -17,7 +17,6 @@
     <string name="ytdl_updating_started">Download versi anyar</string>
     <string name="downloads_running_try_later">Ngundhuh buruh lagi mlaku. Coba maneh mengko</string>
     <string name="new_template">Cithakan anyar</string>
-    <string name="update_ytdl_nightly">yt-dlp Versi Wengi</string>
     <string name="concurrent_downloads_summary">Jumlah download sing mlaku bebarengan</string>
     <string name="enable_mtime">Aktifake wektu</string>
     <string name="adjust_video">Ngatur video</string>
@@ -50,7 +49,7 @@
     <string name="end">Akhir</string>
     <string name="create_template">Nggawe Cithakan</string>
     <string name="freespace">Ruang kosong penyimpanan</string>
-    <string name="Open_File">Buka berkas</string>
+    <string name="open_file">Buka berkas</string>
     <string name="start">Wiwitan</string>
     <string name="request_permission_desc">Aplikasi iki mbutuhake Idin File kanggo nyimpen download ing piranti</string>
     <string name="version">Versi</string>

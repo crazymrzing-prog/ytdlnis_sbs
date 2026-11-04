@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.deniscerri.ytdl.R
 import com.deniscerri.ytdl.database.enums.DownloadType
 import com.deniscerri.ytdl.database.models.DownloadItemSimple
+import com.deniscerri.ytdl.util.DragSelectTouchListener
 import com.deniscerri.ytdl.util.Extensions.loadThumbnail
 import com.deniscerri.ytdl.util.Extensions.popup
 import com.deniscerri.ytdl.util.FileUtil
@@ -31,7 +32,7 @@ import java.util.Locale
 
 class ScheduledDownloadAdapter(onItemClickListener: OnItemClickListener, activity: Activity) : PagingDataAdapter<DownloadItemSimple, ScheduledDownloadAdapter.ViewHolder>(
     DIFF_CALLBACK
-) {
+), DragSelectTouchListener.Selectable {
     private val onItemClickListener: OnItemClickListener
     private val activity: Activity
     val checkedItems: MutableSet<Long> = mutableSetOf()
@@ -96,15 +97,24 @@ class ScheduledDownloadAdapter(onItemClickListener: OnItemClickListener, activit
         //DOWNLOAD TYPE -----------------------------
         val type = card.findViewById<TextView>(R.id.download_type)
         when(item.type){
-            DownloadType.audio -> type.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_music_formatcard, 0,0,0
-            )
-            DownloadType.video -> type.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_video_formatcard, 0,0,0
-            )
-            else -> type.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_terminal_formatcard, 0,0,0
-            )
+            DownloadType.audio -> {
+                type.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_music_formatcard, 0,0,0
+                )
+                type.text = activity.getString(R.string.audio)
+            }
+            DownloadType.video -> {
+                type.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_video_formatcard, 0,0,0
+                )
+                type.text = activity.getString(R.string.video)
+            }
+            else -> {
+                type.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_terminal_formatcard, 0,0,0
+                )
+                type.text = activity.getString(R.string.command)
+            }
         }
 
         val formatNote = card.findViewById<TextView>(R.id.format_note)
@@ -216,6 +226,20 @@ class ScheduledDownloadAdapter(onItemClickListener: OnItemClickListener, activit
 
         card.isChecked = !card.isChecked
         onItemClickListener.onCardSelect(card.isChecked, position)
+    }
+
+    override fun isItemSelected(position: Int): Boolean {
+        val item = (if (position in 0 until itemCount) peek(position) else null) ?: return false
+        return checkedItems.contains(item.id) != inverted
+    }
+
+    override fun setItemSelected(position: Int, selected: Boolean) {
+        val item = (if (position in 0 until itemCount) peek(position) else null) ?: return
+        if (isItemSelected(position) == selected) return
+        if (selected != inverted) checkedItems.add(item.id) else checkedItems.remove(item.id)
+        // the payload skips the change animation so cards don't flash while dragging
+        notifyItemChanged(position, "selection")
+        onItemClickListener.onCardSelect(selected, position)
     }
 
     interface OnItemClickListener {

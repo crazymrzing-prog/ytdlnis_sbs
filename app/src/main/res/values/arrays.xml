@@ -771,6 +771,18 @@
         <item>vtt</item>
     </string-array>
 
+    <string-array name="background_update_check_types">
+        <item>@string/background_update_app</item>
+        <item>@string/background_update_packages</item>
+        <item>@string/auto_update_ytdlp</item>
+    </string-array>
+
+    <string-array name="background_update_check_types_values">
+        <item>app</item>
+        <item>packages</item>
+        <item>ytdlp</item>
+    </string-array>
+
     <string-array name="hide_thumbnail">
         <item>@string/home</item>
         <item>@string/downloads</item>
@@ -1454,6 +1466,7 @@
         <item>android</item>
         <item>android_vr</item>
         <item>ios</item>
+        <item>ios_producer</item>
         <item>mweb</item>
         <item>tv</item>
         <item>tv_downgraded</item>
@@ -1520,17 +1533,6 @@
         <item>media_type</item>
     </string-array>
 
-    <string-array name="apk_install_methods">
-        <item>@string/system</item>
-        <item>Shizuku</item>
-        <item>@string/external</item>
-    </string-array>
-
-    <string-array name="apk_install_methods_values">
-        <item>system</item>
-        <item>shizuku</item>
-        <item>external</item>
-    </string-array>
 
     <string-array name="internal_plugin_ffmpeg_preset">
         <item>@string/defaultValue</item>

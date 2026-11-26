@@ -1,6 +1,7 @@
 package com.deniscerri.ytdl.ui.more.settings.updating
 
 import android.content.pm.PackageManager
+import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager
 import com.deniscerri.ytdl.App
@@ -10,6 +11,7 @@ import com.deniscerri.ytdl.ui.more.settings.SettingHost
 import com.deniscerri.ytdl.ui.more.settings.SettingModule
 import com.deniscerri.ytdl.util.ApkInstallUtil
 import com.deniscerri.ytdl.util.UiUtil
+import com.deniscerri.ytdl.work.background.UpdateCheckWorker
 import com.google.android.material.snackbar.Snackbar
 import java.io.File
 
@@ -56,58 +58,42 @@ object UpdateSettingsModule : SettingModule {
                     }
                 }
             }
-            "apk_install_method" -> {
-                pref.apply {
+            UpdateCheckWorker.PREF_ENABLED -> {
+                pref.setOnPreferenceChangeListener { _, newValue ->
+                    preferences.edit().putBoolean(UpdateCheckWorker.PREF_ENABLED, newValue as Boolean).commit()
+                    UpdateCheckWorker.sync(context)
+                    true
+                }
+            }
+            UpdateCheckWorker.PREF_TYPES -> {
+                (pref as MultiSelectListPreference).apply {
+                    // app updates are only offered by the GitHub build
+                    if (BuildConfig.FLAVOR != "github") {
+                        entries = entries.drop(1).toTypedArray()
+                        entryValues = entryValues.drop(1).toTypedArray()
+                    }
+                    fun setSummary(selected: Set<String>) {
+                        summary = entryValues.indices.filter { selected.contains(entryValues[it]) }
+                            .joinToString(", ") { entries[it] }
+                            .ifEmpty { context.getString(R.string.notset) }
+                    }
+                    setSummary(values)
                     setOnPreferenceChangeListener { _, newValue ->
-                        var resp = true
-                        if ((newValue as String) == "shizuku") {
-                            ApkInstallUtil.requestShizukuPermission { granted, error ->
-                                if (!granted) {
-                                    Snackbar.make(host.hostView!!, error ?: "Shizuku permission not granted", Snackbar.LENGTH_LONG).show()
-                                    resp = false
-                                }
-                            }
-                        }
-
-                        if (resp) {
-                            host.findPref("apk_install_external_apk_id")?.isVisible = (newValue as String) == "external"
-                            host.refreshUI()
-                        }
-
-                        resp
+                        @Suppress("UNCHECKED_CAST")
+                        setSummary(newValue as Set<String>)
+                        true
                     }
                 }
             }
-            "apk_install_external_apk_id" -> {
+            "apk_install_method" -> {
                 pref.apply {
-                    isVisible = preferences.getString("apk_install_method", "system")!! == "external"
-                    val packageName = preferences.getString("apk_install_external_apk_id", "")!!
-
-                    fun setDetails(packageName: String) {
-                        if (packageName == "") {
-                            summary = context.getString(R.string.notset)
-                        } else {
-                            try {
-                                val appIcon = host.getHostContext().packageManager.getApplicationIcon(packageName)
-                                val appInfo = host.getHostContext().packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
-                                icon = appIcon
-                                summary = host.getHostContext().packageManager.getApplicationLabel(appInfo).toString()
-                            } catch (e: Exception) {
-                                summary = context.getString(R.string.notset)
-                            }
+                    summary = ApkInstallUtil.getSelectedInstallerLabel(context)
+                    setOnPreferenceClickListener {
+                        ApkInstallUtil.showInstallerPickerDialog(host.getHostContext()) { picked ->
+                            if (picked) summary = ApkInstallUtil.getSelectedInstallerLabel(context)
                         }
+                        true
                     }
-                    setDetails(packageName)
-
-                    onPreferenceClickListener =
-                        Preference.OnPreferenceClickListener {
-                            UiUtil.showChooseInstallerAppDialog(host.getHostContext()) {
-                                preferences.edit().putString("apk_install_external_apk_id", it).apply()
-                                setDetails(it)
-                                host.refreshUI()
-                            }
-                            true
-                        }
                 }
             }
         }

@@ -103,6 +103,13 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
             .getOrDefault(Pair(listOf(""), null))
     }
 
+    suspend fun getMuxedStreamUrl(url: String) : Result<String> {
+        if (url.isYoutubeURL()) {
+            runCatching { newPipeUtil.getMuxedStreamUrl(url) }.getOrNull()?.let { return Result.success(it) }
+        }
+        return ytdlpUtil.getMuxedStreamUrl(url)
+    }
+
     suspend fun search(inputQuery: String, resetResults: Boolean, addToResults: Boolean) : List<ResultItem>{
         if (resetResults) deleteAll()
         val res = when(sharedPreferences.getString("search_engine", "ytsearch")) {
@@ -168,7 +175,7 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
     }
 
     private suspend fun getYoutubeVideo(inputQuery: String, resetResults: Boolean, addToResults: Boolean) : List<ResultItem>{
-        val theURL = inputQuery.replace("\\?list.*".toRegex(), "")
+        val theURL = inputQuery.replace("([?&])list=[^&#]*&?".toRegex(), "$1").trimEnd('?', '&')
         val newpipeExtractorResult = if (isUsingNewPipeExtractorDataFetching()) {
             newPipeUtil.getVideoData(theURL)
         }else {
@@ -178,7 +185,7 @@ class ResultRepository(private val resultDao: ResultDao, commandTemplateDao: Com
         val res = if (newpipeExtractorResult.isSuccess) {
             newpipeExtractorResult.getOrNull()!!
         }else{
-            ytdlpUtil.getFromYTDL( inputQuery, resultsGenerated = {})
+            ytdlpUtil.getFromYTDL( theURL, resultsGenerated = {})
         }
         currentCoroutineContext().ensureActive()
 

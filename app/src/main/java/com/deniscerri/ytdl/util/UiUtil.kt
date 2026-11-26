@@ -59,6 +59,7 @@ import com.afollestad.materialdialogs.utils.MDUtil.textChanged
 import com.deniscerri.ytdl.R
 import com.deniscerri.ytdl.core.packages.PackageBase
 import com.deniscerri.ytdl.database.enums.DownloadType
+import com.deniscerri.ytdl.database.enums.MetadataTag
 import com.deniscerri.ytdl.database.models.CommandTemplate
 import com.deniscerri.ytdl.database.models.DownloadItem
 import com.deniscerri.ytdl.database.models.Format
@@ -1359,8 +1360,10 @@ object UiUtil {
         extraCommandsClicked: (changed: (newExtraCommandString: String) -> Unit) -> Unit,
         liveFromStart: (Boolean) -> Unit,
         waitForVideo: (Boolean, Int) -> Unit,
+        metadataClicked: ((changed: () -> Unit) -> Unit),
     ){
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        configureMetadataChip(view, context, items, metadataClicked)
 
         val adjustThumbnail = view.findViewById<Chip>(R.id.thumbnail)
         fun calculateAdjustThumbnailChangeCount() {
@@ -1909,6 +1912,15 @@ object UiUtil {
         }
     }
 
+    private fun configureMetadataChip(view: View, context: Activity, items: List<DownloadItem>, clicked: ((changed: () -> Unit) -> Unit)?) {
+        val chip = view.findViewById<Chip>(R.id.metadata_chip)
+        chip.isVisible = clicked != null
+        if (clicked == null) return
+        fun updateBadge() = chip.createBadge(context, if (items.size > 1) 0 else MetadataTag.tagsOf(items.first())?.size ?: 0)
+        updateBadge()
+        chip.setOnClickListener { clicked { updateBadge() } }
+    }
+
     fun configureAudio(
         view: View,
         context: Activity,
@@ -1925,10 +1937,12 @@ object UiUtil {
         cutValueChanged: (String) -> Unit,
         mergeCutsChanged: (Boolean) -> Unit,
         extraCommandsClicked: (changed: (newExtraCommandString: String) -> Unit) -> Unit,
+        metadataClicked: ((changed: () -> Unit) -> Unit),
         lyricsClicked: ((changed: () -> Unit) -> Unit)? = null,
         lyricsChanged: (() -> Unit)? = null
     ){
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        configureMetadataChip(view, context, items, metadataClicked)
 
         val lyrics = view.findViewById<Chip>(R.id.lyrics)
         fun updateLyricsBadge() {
@@ -2913,6 +2927,7 @@ object UiUtil {
             }
             .setNegativeButton(R.string.cancel) { _: DialogInterface?, _: Int ->
                 tmpDownloadJob?.cancel()
+                ApkInstallUtil.cancelPendingInstall(context)
             }
             .setPositiveButton(R.string.update, null)
         val view = updateDialog.show()
@@ -2965,10 +2980,9 @@ object UiUtil {
                     lifecycleScope.launch {
                         withContext(Dispatchers.Main) {
                             positiveButton.text = context.getString(R.string.please_wait)
-                            negativeButton.isEnabled = false
                             neutralButton.isEnabled = false
 
-                            ApkInstallUtil.installApk(context, file, installLauncher) { result ->
+                            ApkInstallUtil.installApk(context, file, installLauncher, lifecycleOwner) { result ->
                                 result.onSuccess {
                                 }.onFailure { f ->
                                     Snackbar.make(context.findViewById(R.id.frame_layout), f.message ?: "", Snackbar.LENGTH_LONG).show()
@@ -3004,6 +3018,7 @@ object UiUtil {
             .setCancelable(false)
             .setNegativeButton(context.getString(R.string.cancel)) { _: DialogInterface?, _: Int ->
                 tmpDownloadJob?.cancel()
+                ApkInstallUtil.cancelPendingInstall(context)
             }
             .setPositiveButton(context.getString(R.string.download), null)
         val view = updateDialog.show()
@@ -3054,9 +3069,7 @@ object UiUtil {
                     lifecycleScope.launch {
                         withContext(Dispatchers.Main) {
                             positiveButton.text = context.getString(R.string.please_wait)
-                            negativeButton.isEnabled = false
-
-                            ApkInstallUtil.installApk(context, file, installLauncher) { result ->
+                            ApkInstallUtil.installApk(context, file, installLauncher, lifecycleOwner) { result ->
                                 onResult(result)
                                 view.dismiss()
                             }
@@ -3278,78 +3291,28 @@ object UiUtil {
         toTextInput.editText!!.setText(maxDelay)
     }
 
-    fun showChooseInstallerAppDialog(context: Activity, appIdSelected: (appId: String) -> Unit) {
-        val builder = MaterialAlertDialogBuilder(context)
-        builder.setTitle(context.getString(R.string.choose_installer_app))
-        builder.setIcon(R.drawable.baseline_install_mobile_24)
-        val view = context.layoutInflater.inflate(R.layout.choose_installer_app_dialog, null)
+    fun setupRecentDownloadPaths(saveDir: TextInputLayout, onPathSelected: (String) -> Unit) {
+        val context = saveDir.context
 
-        data class ExternalInstallerApp(
-            val appName: String,
-            val packageName: String,
-            val icon: Drawable
-        )
+        val currentPath = saveDir.editText?.text?.toString()
+        val paths = FileUtil.getRecentDownloadPaths(context).filter { FileUtil.formatPath(it) != currentPath }
+        if (paths.isEmpty()) return
 
-        lateinit var alertDialog: AlertDialog
-
-        val installersList = mutableListOf<ExternalInstallerApp>()
-        val packageManager = context.packageManager
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(Uri.parse("content://dummy"), "application/vnd.android.package-archive")
+        saveDir.endIconMode = TextInputLayout.END_ICON_CUSTOM
+        saveDir.endIconDrawable = AppCompatResources.getDrawable(context, R.drawable.ic_history)
+        saveDir.endIconContentDescription = context.getString(R.string.recent_folders)
+        saveDir.setEndIconOnClickListener {
+            val paths = FileUtil.getRecentDownloadPaths(context)
+            val current = saveDir.editText?.text?.toString()
+            val checked = paths.indexOfFirst { FileUtil.formatPath(it) == current }
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.recent_folders)
+                .setSingleChoiceItems(paths.map { FileUtil.formatPath(it) }.toTypedArray(), checked) { dialog, i ->
+                    if (i != checked) onPathSelected(paths[i])
+                    dialog.dismiss()
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
         }
-
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong())
-        } else {
-            0
-        }
-
-        val resolveInfoList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.queryIntentActivities(intent, flags as PackageManager.ResolveInfoFlags)
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
-        }
-
-        for (resolveInfo in resolveInfoList) {
-            val activityInfo = resolveInfo.activityInfo ?: continue
-            val appPackageName = activityInfo.packageName
-
-            // Exclude your own app from the list of external options
-            if (appPackageName == context.packageName) continue
-
-            val appName = resolveInfo.loadLabel(packageManager).toString()
-            val appIcon = resolveInfo.loadIcon(packageManager)
-
-            installersList.add(
-                ExternalInstallerApp(
-                    appName = appName,
-                    packageName = appPackageName,
-                    icon = appIcon
-                )
-            )
-        }
-
-        val finalList = installersList.distinctBy { it.packageName }.sortedBy { it.appName }
-        if (finalList.isEmpty()) {
-            return
-        }
-
-        finalList.forEach { app ->
-            val card = context.layoutInflater.inflate(R.layout.installer_app_card, null)
-            card.findViewById<TextView>(R.id.app_name).text = app.appName
-            card.findViewById<ShapeableImageView>(R.id.app_icon).setImageDrawable(app.icon)
-
-            card.setOnClickListener {
-                appIdSelected(app.packageName)
-                alertDialog.dismiss()
-            }
-
-            (view as LinearLayout).addView(card)
-        }
-
-        builder.setView(view)
-        alertDialog = builder.create()
-        alertDialog.show()
     }
 }
